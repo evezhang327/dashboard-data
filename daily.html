@@ -334,7 +334,7 @@ async function renderAll(){
       return `<tr><td><span class="wh-link" data-wh="${w.code}">${esc(w.code)}</span><div class="hint">${esc(w.wms_code||'')} · ${esc(w.name)}</div></td><td>${st}</td><td colspan="9"></td></tr>`; }
     const need=act.reduce((s,a)=>s+a.due-a.pre_done,0), done=act.reduce((s,a)=>s+a.done-a.pre_done,0);
     T.e+=run.total_est;T.a+=run.total_arrived;T.g+=run.gaylord;T.p+=run.pallets;T.v+=run.trucks;T.bl+=run.backlog||0; if(act.length){T.need+=need;T.done+=done;T.me+=mrun?mrun.total_est:run.total_est;T.has++;}
-    return `<tr><td><span class="wh-link" data-wh="${w.code}">${esc(w.code)}</span><div class="hint">${esc(w.wms_code||'')} · ${esc(w.name)}</div></td><td>${run.run_type==='evening'?'傍晚':'早上'} ${localTime(run)}${err&&err.run_at>run.run_at?' <span class="tag bad">最近失败</span>':''}</td>
+    return `<tr><td><span class="wh-link" data-wh="${w.code}">${esc(w.code)}</span><div class="hint">${esc(w.wms_code||'')} · ${esc(w.name)}</div></td><td>${({evening:'傍晚',manual:'手动'}[run.run_type]||'早上')} ${localTime(run)}${err&&err.run_at>run.run_at?' <span class="tag bad">最近失败</span>':''}</td>
       <td class="num"><b>${fmt(run.total_est)}</b></td><td class="num">${fmt(run.total_arrived)}</td><td class="num">${fmt(run.gaylord)}</td><td class="num">${fmt(run.pallets)}</td><td class="num">${fmt(run.trucks)}</td><td class="num">${run.backlog?`<span style="color:var(--bad)">${fmt(run.backlog)}</span>`:'0'}</td>
       <td class="num bl">${act.length?fmt(need):'—'}</td><td class="num">${act.length?rateTag(done,need):'—'}</td><td class="num">${act.length?errTag(mrun?mrun.total_est:run.total_est,need):'—'}</td></tr>`;}).join('');
   // 全美按服务商
