@@ -186,13 +186,14 @@ h1::before{display:none!important}
 <body>
 <div id="loginView" class="card login" style="display:none">
   <h2>大促提货看板</h2>
-  <div class="sub">请使用管理员分配的账号登录</div>
+  <div class="sub">管理员登录（登录后可修改、作废到车记录）。普通查看无需登录。</div>
   <form id="loginForm">
     <input id="email" type="email" placeholder="邮箱" autocomplete="username" required>
     <input id="pwd" type="password" placeholder="密码" autocomplete="current-password" required>
     <div class="err" id="loginErr"></div>
     <button class="btn primary" style="width:100%;padding:10px" type="submit">登录</button>
   </form>
+  <button class="btn" id="btnBack" style="width:100%;padding:10px;margin-top:8px" type="button">← 返回看板</button>
 </div>
 
 <div id="app" class="wrap" style="display:none">
@@ -207,7 +208,8 @@ h1::before{display:none!important}
       <a class="btn" id="checkinLink" href="report.html?from=dash" style="text-decoration:none;color:var(--ink)">仓库填报入口 →</a>
       <button class="btn" id="btnRefresh">刷新</button>
       <button class="btn" id="btnExport">导出明细 CSV</button>
-      <button class="btn" id="btnLogout" style="display:none">退出</button>
+      <button class="btn" id="btnAdmin">管理员登录</button>
+      <button class="btn" id="btnLogout" style="display:none">退出管理员</button>
     </div>
   </header>
 
@@ -356,7 +358,7 @@ async function loadLive(){
     sb.from('warehouses').select('*').order('code'),
     sb.from('carriers').select('*'),
     sb.from('forecast').select('date,warehouse,carrier,fc_units,fc_orders,mode').gte('date',DATES[0]).lte('date',DATES[DATES.length-1]).limit(5000),
-    sb.from('pickups').select('*').gte('date',DATES[0]).lte('date',DATES[DATES.length-1]).order('arrived_at',{ascending:false}).limit(10000),
+    sb.from('pickups').select('id,created_at,date,warehouse,carrier,trailer_no,arrived_at,orders,pallets,exception_type,note,reporter,photo_paths,voided,void_reason').gte('date',DATES[0]).lte('date',DATES[DATES.length-1]).order('arrived_at',{ascending:false}).limit(10000),
   ]);
   for(const r of [w,c,f,p]) if(r.error) throw r.error;
   if(w.data.length) S.warehouses = w.data;
@@ -624,8 +626,8 @@ function renderDetail(){
   if(q) rows=rows.filter(r=>[r.trailer_no,r.warehouse,r.carrier,r.reporter,r.note,r.exception_type,whOf(r.warehouse).name].join(' ').toLowerCase().includes(q));
   rows.sort((a,b)=> (b.date+b.arrived_at).localeCompare(a.date+a.arrived_at));
   const shown=rows.slice(0,500);
-  $('detail').innerHTML = rows.length ? `<thead><tr><th>日期</th><th>到达</th><th>仓库</th><th>服务商</th><th>Trailer</th><th class="num">单量</th><th class="num">板数</th><th>异常</th><th>填报人</th><th>照片</th>${LIVE?'<th></th>':''}</tr></thead><tbody>`+
-    shown.map(r=>`<tr class="${r.voided?'void':''}"><td>${md(r.date)}</td><td>${timeLocal(r)}</td><td>${esc(r.warehouse)}</td><td>${esc(r.carrier)}</td><td><b>${esc(r.trailer_no)}</b></td><td class="num">${fmt(r.orders)}</td><td class="num">${r.pallets==null?'—':fmt(r.pallets)}</td><td>${r.exception_type?`<span class="tag bad">${esc(r.exception_type)}</span>${r.note?`<div style="font-size:12px;color:var(--ink2);margin-top:2px">${esc(r.note)}</div>`:''}`:''}</td><td>${esc(r.reporter)}</td><td><div class="thumbs">${(r.photo_paths||[]).map((p,i)=>`<button data-photo="${esc(p)}">图${i+1}</button>`).join('')||'<span style="color:var(--ink3)">—</span>'}</div></td>${LIVE?`<td>${r.voided?`<span class="tag">已作废</span>`:`<button class="btn sm" data-void="${r.id}">作废</button>`}</td>`:''}</tr>`).join('')+'</tbody>'
+  $('detail').innerHTML = rows.length ? `<thead><tr><th>日期</th><th>到达</th><th>仓库</th><th>服务商</th><th>Trailer</th><th class="num">单量</th><th class="num">板数</th><th>异常</th><th>填报人</th><th>照片</th>${S.admin?'<th></th>':''}</tr></thead><tbody>`+
+    shown.map(r=>`<tr class="${r.voided?'void':''}"><td>${md(r.date)}</td><td>${timeLocal(r)}</td><td>${esc(r.warehouse)}</td><td>${esc(r.carrier)}</td><td><b>${esc(r.trailer_no)}</b></td><td class="num">${fmt(r.orders)}</td><td class="num">${r.pallets==null?'—':fmt(r.pallets)}</td><td>${r.exception_type?`<span class="tag bad">${esc(r.exception_type)}</span>${r.note?`<div style="font-size:12px;color:var(--ink2);margin-top:2px">${esc(r.note)}</div>`:''}`:''}</td><td>${esc(r.reporter)}</td><td><div class="thumbs">${(r.photo_paths||[]).length?((S.admin||!LIVE)?(r.photo_paths||[]).map((p,i)=>`<button data-photo="${esc(p)}">图${i+1}</button>`).join(''):`<span style="color:var(--ink2)">${r.photo_paths.length} 张</span>`):'<span style="color:var(--ink3)">—</span>'}</div>${r.voided&&r.void_reason?`<div style="font-size:12px;color:var(--ink3)">作废：${esc(r.void_reason)}</div>`:''}</td>${S.admin?`<td style="white-space:nowrap">${r.voided?`<span class="tag">已作废</span> <button class="btn sm" data-unvoid="${r.id}">恢复</button>`:`<button class="btn sm" data-edit="${r.id}">修改</button> <button class="btn sm" data-void="${r.id}">作废</button>`}</td>`:''}</tr>`).join('')+'</tbody>'
     : `<tbody><tr><td class="empty">${LIVE?'当前筛选下还没有到车记录':'演示模式：部署后，仓库通过填报小程序提交的到车记录会实时出现在这里'}</td></tr></tbody>`;
   if(rows.length>500) $('detail').insertAdjacentHTML('beforeend',`<tfoot><tr><td colspan="11" class="hint">仅显示最近 500 条，共 ${rows.length} 条；可导出 CSV 查看全部</td></tr></tfoot>`);
 }
@@ -651,6 +653,8 @@ document.addEventListener('click', async e=>{
   const sc=e.target.closest('[data-src]'); if(sc){ S.actSrc=sc.dataset.src; renderHero(); renderCharts(); return; }
   const p=e.target.closest('[data-photo]'); if(p){ openPhoto(p.dataset.photo); return; }
   const v=e.target.closest('[data-void]'); if(v){ voidRow(v.dataset.void); return; }
+  const ed=e.target.closest('[data-edit]'); if(ed){ editRow(ed.dataset.edit); return; }
+  const uv=e.target.closest('[data-unvoid]'); if(uv){ unvoidRow(uv.dataset.unvoid); return; }
   if(e.target===$('modal')) $('modal').classList.remove('on');
 });
 $('fDate').onchange=e=>{S.f.date=e.target.value; renderAll();};
@@ -673,8 +677,61 @@ function voidRow(id){
   $('modalBox').innerHTML=`<h3 style="margin:4px 0 8px">作废这条到车记录？</h3><div class="hint" style="margin-bottom:10px">${esc(r.warehouse)} · ${esc(r.carrier)} · ${esc(r.trailer_no)}。作废后不计入统计，记录保留可查。</div><input id="voidReason" class="search" style="width:100%" placeholder="作废原因（如：重复提交）"><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn" onclick="document.getElementById('modal').classList.remove('on')">取消</button><button class="btn primary" id="voidGo">确认作废</button></div>`;
   $('modal').classList.add('on');
   $('voidGo').onclick=async()=>{ const reason=$('voidReason').value.trim()||'看板作废';
-    const { error } = await sb.from('pickups').update({voided:true, void_reason:reason}).eq('id',voidTarget);
-    $('modal').classList.remove('on'); if(error) return showErr(error); await loadLive(); renderAll(); };
+    const { data, error } = await sb.from('pickups').update({voided:true, void_reason:reason}).eq('id',voidTarget).select('id');
+    $('modal').classList.remove('on'); if(error) return showErr(error); if(!data||!data.length) return showErr({message:'没有修改权限（该账号不在管理员名单里）'}); await loadLive(); renderAll(); };
+}
+
+// ---------- 管理员：修改 / 恢复 ----------
+const EXC_TYPES=['','晚到','车满/部分拒收','货未齐','车辆问题','其他'];
+function tzOffsetMs(tz, d){ // 某时区在时刻 d 的 UTC 偏移（毫秒）
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(d).map(x=>[x.type,x.value]));
+  return Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second)-d.getTime();
+}
+function toTzInput(iso, tz){ const d=new Date(iso); const l=new Date(d.getTime()+tzOffsetMs(tz,d)); return l.toISOString().slice(0,16); }
+function fromTzInput(v, tz){ // 'YYYY-MM-DDTHH:mm'（仓库当地时间）→ Date
+  const [a,b]=v.split('T'); const [y,m,dd]=a.split('-').map(Number); const [hh,mi]=b.split(':').map(Number);
+  const guess=Date.UTC(y,m-1,dd,hh,mi); let t=guess-tzOffsetMs(tz,new Date(guess)); t=guess-tzOffsetMs(tz,new Date(t)); return new Date(t);
+}
+function editRow(id){
+  const r=S.pickups.find(x=>x.id===id); if(!r) return; const w=whOf(r.warehouse); const tz=w.tz||'America/Los_Angeles';
+  const inp='class="search" style="width:100%;min-width:0;margin-top:4px"';
+  $('modalBox').innerHTML=`<h3 style="margin:4px 0 4px">修改到车记录</h3>
+    <div class="hint" style="margin-bottom:10px">${esc(r.warehouse)} · ${esc(w.name||'')} · 填报人 ${esc(r.reporter)}（到达时间按仓库当地时间）</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:min(520px,80vw)">
+      <label>服务商<select id="eCarrier" ${inp}>${CARRIER_ORDER.map(c=>`<option ${c===r.carrier?'selected':''}>${c}</option>`).join('')}</select></label>
+      <label>Trailer<input id="eTrailer" ${inp} value="${esc(r.trailer_no)}"></label>
+      <label>到达时间<input id="eArrived" type="datetime-local" ${inp} value="${toTzInput(r.arrived_at,tz)}"></label>
+      <label>异常<select id="eExc" ${inp}>${EXC_TYPES.map(x=>`<option value="${esc(x)}" ${x===(r.exception_type||'')?'selected':''}>${x||'无异常'}</option>`).join('')}</select></label>
+      <label>单量<input id="eOrders" type="number" min="0" step="1" ${inp} value="${r.orders??''}"></label>
+      <label>板数<input id="ePallets" type="number" min="0" step="1" ${inp} value="${r.pallets??''}"></label>
+      <label style="grid-column:1/-1">备注<input id="eNote" ${inp} value="${esc(r.note||'')}"></label>
+    </div>
+    <div class="err" id="eErr" style="color:var(--bad);font-size:13px;min-height:18px;margin-top:8px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px"><button class="btn" id="eCancel">取消</button><button class="btn primary" id="eSave">保存修改</button></div>`;
+  $('modal').classList.add('on');
+  $('eCancel').onclick=()=>$('modal').classList.remove('on');
+  $('eSave').onclick=async()=>{
+    const trailer=$('eTrailer').value.trim().toUpperCase().replace(/\s+/g,'');
+    const num=id=>{ const v=$(id).value; return v===''?null:Math.max(0,Math.round(+v)); };
+    if(!trailer){ $('eErr').textContent='请填写 Trailer'; return; }
+    if(!$('eArrived').value){ $('eErr').textContent='请填写到达时间'; return; }
+    const arrived=fromTzInput($('eArrived').value,tz);
+    const day=new Intl.DateTimeFormat('en-CA',{timeZone:tz}).format(arrived);
+    const exc=$('eExc').value||null;
+    const patch={carrier:$('eCarrier').value, trailer_no:trailer, arrived_at:arrived.toISOString(), date:day,
+      orders:num('eOrders'), pallets:num('ePallets'), exception_type:exc, note:$('eNote').value.trim()||null};
+    $('eSave').disabled=true;
+    const { data, error } = await sb.from('pickups').update(patch).eq('id',id).select('id');
+    $('eSave').disabled=false;
+    if(error){ $('eErr').textContent='保存失败：'+(error.code==='23505'?'与已有记录重复（同仓同服务商同 Trailer 同到达时间）':error.message); return; }
+    if(!data||!data.length){ $('eErr').textContent='保存失败：没有修改权限（该账号不在管理员名单里）'; return; }
+    $('modal').classList.remove('on'); await loadLive(); renderAll();
+  };
+}
+async function unvoidRow(id){
+  const { data, error } = await sb.from('pickups').update({voided:false, void_reason:null}).eq('id',id).select('id');
+  if(error) return showErr(error); if(!data||!data.length) return showErr({message:'没有修改权限（该账号不在管理员名单里）'});
+  await loadLive(); renderAll();
 }
 function exportCsv(){
   const cols=['date','arrived_at','warehouse','carrier','trailer_no','orders','pallets','exception_type','note','reporter','photo_paths','voided','void_reason'];
@@ -689,10 +746,14 @@ function showErr(err){ $('banner').innerHTML=`<div class="banner err">出错了�
 if(CFG.CHECKIN_URL){ const a=document.getElementById('checkinLink'); if(a){ a.href=CFG.CHECKIN_URL.replace(/\/$/,'')+'/?from=dash'; a.target='_blank'; } }
 async function start(){
   if(DATES.includes(refToday())) S.f.date='';
-  if(!LIVE){ $('app').style.display='block'; renderAll(); return; }
+  if(!LIVE){ $('app').style.display='block'; $('btnAdmin').style.display='none'; renderAll(); return; }
   const { data:{ session } } = await sb.auth.getSession();
-  if(!session){ $('loginView').style.display='block'; return; }
-  $('app').style.display='block'; $('btnLogout').style.display='';
+  S.admin=false;
+  if(session){ const r=await sb.rpc('is_admin'); S.admin=!!r.data; }
+  $('app').style.display='block';
+  $('btnAdmin').style.display = session ? 'none' : '';
+  $('btnLogout').style.display = session ? '' : 'none';
+  if(session && !S.admin) showErr({message:'当前账号不在管理员名单里，只能查看。'});
   renderAll();
   try{ await loadLive(); }catch(err){ showErr(err); }
   renderAll(); subscribeLive();
@@ -700,7 +761,9 @@ async function start(){
 $('loginForm').onsubmit=async e=>{ e.preventDefault(); $('loginErr').textContent='';
   const { error } = await sb.auth.signInWithPassword({ email:$('email').value.trim(), password:$('pwd').value });
   if(error){ $('loginErr').textContent='登录失败：'+error.message; return; }
-  $('loginView').style.display='none'; start(); };
+  location.reload(); };
+$('btnAdmin').onclick=()=>{ $('app').style.display='none'; $('loginView').style.display='block'; $('email').focus(); };
+$('btnBack').onclick=()=>{ $('loginView').style.display='none'; $('app').style.display='block'; };
 $('btnLogout').onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
 start();
 </script>
