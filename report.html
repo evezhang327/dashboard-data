@@ -366,8 +366,7 @@ function renderHistory(){
       <div class="h"><span class="tr">${esc(r.trailer_no)}</span><span><span class="pill c">${esc(r.carrier)}</span>${r.voided?` <span class="pill">${t('hVoid')}</span>`:''}</span></div>
       <div class="m"><span>${fmtT(r)}</span><span>${t('orders')} ${r.orders??'—'}</span>${r.pallets!=null?`<span>${t('pallets')} ${r.pallets}</span>`:''}<span>${r.photo_count||0} ${t('hPhotos')}</span><span>${t('hBy')} ${esc(r.reporter)}</span></div>
       ${r.exception_type?`<div class="m"><span class="pill x">${esc(r.exception_type)}</span>${r.note?`<span>${esc(r.note)}</span>`:''}</div>`:''}
-      ${S.admin&&r.voided&&r.void_reason?`<div class="m"><span>作废原因：${esc(r.void_reason)}</span></div>`:''}
-      ${S.admin?`<div class="ract">${r.voided?`<button data-aunvoid="${r.id}">恢复</button>`:`<button data-aedit="${r.id}">修改</button><button class="r" data-avoid="${r.id}">作废</button>`}</div>`:''}
+      ${S.admin?`<div class="ract"><button data-aedit="${r.id}">修改</button><button class="r" data-adel="${r.id}">删除</button></div>`:''}
     </div>`).join('') : `<div style="text-align:center;color:var(--ink3);padding:24px">${t('hNone')}</div>`;
 }
 
@@ -386,7 +385,7 @@ function renderAdminBar(){
   if(!LIVE){ $('hAdmin').innerHTML=''; return; }
   $('hRo').style.display = S.admin ? 'none' : '';
   $('hAdmin').innerHTML = S.admin
-    ? `<div class="adm"><span>管理员模式：可修改、作废本仓记录（${esc(S.adminEmail||'')}）</span><button id="aLogout">退出</button></div>`
+    ? `<div class="adm"><span>管理员模式：可修改、删除本仓记录（${esc(S.adminEmail||'')}）</span><button id="aLogout">退出</button></div>`
     : `<div style="text-align:right;margin:-4px 0 8px"><button id="aLogin" style="background:none;border:0;color:var(--ink3);font-size:12px;text-decoration:underline">管理员登录</button></div>`;
 }
 async function checkAdmin(){
@@ -397,7 +396,7 @@ async function checkAdmin(){
   renderAdminBar();
 }
 function adminLogin(){
-  amodal(`<h3 style="margin:2px 0 4px">管理员登录</h3><div style="font-size:12px;color:var(--ink2)">登录后可在历史记录里修改、作废记录。仓库同事登记不需要登录。</div>
+  amodal(`<h3 style="margin:2px 0 4px">管理员登录</h3><div style="font-size:12px;color:var(--ink2)">登录后可在历史记录里修改、删除记录。仓库同事登记不需要登录。</div>
     <label>邮箱<input id="aEmail" type="email" autocomplete="username"></label><label>密码<input id="aPwd" type="password" autocomplete="current-password"></label>
     <div class="e" id="aErr"></div><button class="btn2 dark" id="aGo">登录</button><button class="btn2" id="aCancel">取消</button>`);
   $('aCancel').onclick=amodalClose;
@@ -434,30 +433,26 @@ function adminEdit(id){
     if(!data||!data.length) return $('eErr').textContent='保存失败：没有修改权限';
     amodalClose(); loadHistory(); };
 }
-function adminVoid(id){
+function adminDelete(id){
   const r=(S.hRows||[]).find(x=>x.id===id); if(!r) return;
-  amodal(`<h3 style="margin:2px 0 4px">作废这条记录？</h3><div style="font-size:12px;color:var(--ink2)">${esc(r.carrier)} · ${esc(r.trailer_no)}。作废后不计入统计，记录保留可查，可以恢复。</div>
-    <label>作废原因<input id="vReason" placeholder="如：重复提交"></label><div class="e" id="vErr"></div>
-    <button class="btn2 dark" id="vGo">确认作废</button><button class="btn2" id="vCancel">取消</button>`);
+  amodal(`<h3 style="margin:2px 0 4px">删除这条记录？</h3><div style="font-size:13px;color:var(--ink2);margin-top:6px">${esc(r.carrier)} · Trailer <b>${esc(r.trailer_no)}</b> · 填报人 ${esc(r.reporter)}<br>记录和照片会被<b style="color:var(--bad)">永久删除，无法恢复</b>。</div>
+    <div class="e" id="vErr"></div><button class="btn2 dark" id="vGo">确认删除</button><button class="btn2" id="vCancel">取消</button>`);
   $('vCancel').onclick=amodalClose;
   $('vGo').onclick=async()=>{
-    const { data, error } = await sbA.from('pickups').update({voided:true, void_reason:$('vReason').value.trim()||'管理员作废'}).eq('id',id).select('id');
-    if(error) return $('vErr').textContent='作废失败：'+error.message;
-    if(!data||!data.length) return $('vErr').textContent='作废失败：没有修改权限';
+    $('vGo').disabled=true;
+    const { data, error } = await sbA.from('pickups').delete().eq('id',id).select('id,photo_paths');
+    $('vGo').disabled=false;
+    if(error) return $('vErr').textContent='删除失败：'+error.message;
+    if(!data||!data.length) return $('vErr').textContent='删除失败：没有删除权限';
+    const paths=data[0].photo_paths||[]; if(paths.length) await sbA.storage.from('pickup-photos').remove(paths);
     amodalClose(); loadHistory(); };
-}
-async function adminUnvoid(id){
-  const { data, error } = await sbA.from('pickups').update({voided:false, void_reason:null}).eq('id',id).select('id');
-  if(error||!data||!data.length){ $('hList').insertAdjacentHTML('afterbegin',`<div class="err">恢复失败：${esc(error?error.message:'没有修改权限')}</div>`); return; }
-  loadHistory();
 }
 document.addEventListener('click', async e=>{
   if(e.target.id==='aLogin') return adminLogin();
   if(e.target.id==='aLogout'){ await sbA.auth.signOut(); S.admin=false; renderAdminBar(); return loadHistory(); }
   if(e.target===$('amodal')) return amodalClose();
   const a=e.target.closest('[data-aedit]'); if(a) return adminEdit(a.dataset.aedit);
-  const v=e.target.closest('[data-avoid]'); if(v) return adminVoid(v.dataset.avoid);
-  const u=e.target.closest('[data-aunvoid]'); if(u) return adminUnvoid(u.dataset.aunvoid);
+  const d=e.target.closest('[data-adel]'); if(d) return adminDelete(d.dataset.adel);
 });
 function setTab(tab){
   S.tab=tab;
