@@ -370,8 +370,7 @@ async function start(){
   renderBanner();
   if(!LIVE){ Object.assign(S, demoData()); $('app').style.display='block'; return render(); }
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){ $('loginView').style.display='block'; return; }
-  $('app').style.display='block'; $('btnLogout').style.display='';
+  $('app').style.display='block'; if(session) $('btnLogout').style.display='';
   try{ await loadLive(); }catch(e){ $('banner').innerHTML=`<div class="banner">加载失败：${esc(e.message)}</div>`; }
   render();
   sb.channel('dfr').on('postgres_changes',{event:'INSERT',schema:'public',table:'daily_forecast_runs'},async()=>{ try{ await loadLive(); render(); }catch(e){} }).subscribe();
