@@ -65,6 +65,18 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
 .tabs button.on{background:#fff;color:var(--red);box-shadow:0 1px 2px #0f172a1a}
 .hrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .hrow select,.hrow input{flex:1;padding:10px;font-size:15px}
+.adm{font-size:12px;background:#fff4e5;color:#8a4b00;border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.adm a,.adm button{color:var(--red);background:none;border:0;padding:0;font-size:12px;text-decoration:underline;cursor:pointer}
+.ract{display:flex;gap:8px;margin-top:8px}
+.ract button{flex:1;padding:8px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:600}
+.ract button.r{color:var(--red);border-color:#f3c3c0}
+.amodal{position:fixed;inset:0;background:#0f172acc;display:none;align-items:flex-end;justify-content:center;z-index:60}
+.amodal.on{display:flex}
+.amodal .box{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px}
+.amodal label{display:block;font-size:12px;color:var(--ink2);margin-top:8px}
+.amodal input,.amodal select{width:100%;margin-top:4px;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;background:#fff}
+.amodal .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.amodal .e{color:var(--bad);font-size:13px;min-height:18px;margin-top:8px}
 .ro{font-size:12px;color:var(--ink2);background:#eef2f7;border-radius:8px;padding:8px 10px;margin-bottom:10px}
 .hsum{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--ink2);margin:4px 0 10px}
 .hsum b{color:var(--ink);font-size:16px}
@@ -145,7 +157,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
 <main id="doneView" style="display:none"></main>
 
 <main id="historyView" style="display:none">
-  <div class="ro" data-t="readonly"></div>
+  <div class="ro" data-t="readonly" id="hRo"></div>
+  <div id="hAdmin"></div>
   <div class="hrow"><select id="hDate"></select><button class="chip" id="hRefresh" style="flex:none" data-t="refresh"></button></div>
   <div class="hchips" id="hCarrier"></div>
   <div class="hrow"><input type="text" id="hQ" autocomplete="off" spellcheck="false"></div>
@@ -154,6 +167,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
 </main>
 
 <div class="submit" id="submitBar"><button id="submit" data-t="submit"></button></div>
+<div class="amodal" id="amodal"><div class="box" id="amodalBox"></div></div>
 <div class="overlay" id="overlay"><span id="overlayText"></span></div>
 
 <script>
@@ -161,6 +175,7 @@ const BOOT = {"warehouses":[{"code":"LAX-LG-1-US","name":"洛杉矶大件1号仓
 const CFG = window.APP_CONFIG || {};
 const LIVE = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
 const sb = LIVE ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {auth:{persistSession:false}}) : null;
+const sbA = LIVE ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY) : null; // 管理员会话（与看板共用登录）
 
 const T = {
   zh:{title:'提货车辆登记',wh:'仓库',carrier:'服务商',trailer:'Trailer Number（车厢号）',trailerHint:'以车厢上的号码为准',arrived:'到达时间',now:'现在',orders:'本车交接单量',pallets:'板数',photos:'照片',photoHint:'车厢号 / 装车照片，最多 6 张',addPhoto:'拍照',exception:'异常情况',notePh:'请简要说明异常（选填）',reporter:'填报人姓名',submit:'提交登记',
@@ -332,7 +347,10 @@ async function loadHistory(){
   const [from,to]=$('hDate').value.split('|');
   if(!LIVE){ S.hRows=S.demoRows.filter(r=>r.warehouse===w.code&&r.date>=from&&r.date<=to); return renderHistory(); }
   $('hList').innerHTML=`<div class="empty" style="text-align:center;color:var(--ink3);padding:20px">${t('hLoading')}</div>`;
-  const { data, error } = await sb.rpc('wh_history',{p_wh:w.code,p_from:from,p_to:to,p_carrier:null});
+  const { data, error } = S.admin
+    ? await sbA.from('pickups').select('id,date,arrived_at,carrier,trailer_no,orders,pallets,exception_type,note,reporter,photo_paths,voided,void_reason,created_at').eq('warehouse',w.code).gte('date',from).lte('date',to).order('arrived_at',{ascending:false}).limit(1000)
+    : await sb.rpc('wh_history',{p_wh:w.code,p_from:from,p_to:to,p_carrier:null});
+  if(S.admin && data) data.forEach(r=>{ r.photo_count=(r.photo_paths||[]).length; });
   if(error){ $('hList').innerHTML=`<div class="err">${t('hErr')}${esc(error.message)}</div>`; S.hRows=[]; return; }
   S.hRows=data||[]; renderHistory();
 }
@@ -348,8 +366,99 @@ function renderHistory(){
       <div class="h"><span class="tr">${esc(r.trailer_no)}</span><span><span class="pill c">${esc(r.carrier)}</span>${r.voided?` <span class="pill">${t('hVoid')}</span>`:''}</span></div>
       <div class="m"><span>${fmtT(r)}</span><span>${t('orders')} ${r.orders??'—'}</span>${r.pallets!=null?`<span>${t('pallets')} ${r.pallets}</span>`:''}<span>${r.photo_count||0} ${t('hPhotos')}</span><span>${t('hBy')} ${esc(r.reporter)}</span></div>
       ${r.exception_type?`<div class="m"><span class="pill x">${esc(r.exception_type)}</span>${r.note?`<span>${esc(r.note)}</span>`:''}</div>`:''}
+      ${S.admin&&r.voided&&r.void_reason?`<div class="m"><span>作废原因：${esc(r.void_reason)}</span></div>`:''}
+      ${S.admin?`<div class="ract">${r.voided?`<button data-aunvoid="${r.id}">恢复</button>`:`<button data-aedit="${r.id}">修改</button><button class="r" data-avoid="${r.id}">作废</button>`}</div>`:''}
     </div>`).join('') : `<div style="text-align:center;color:var(--ink3);padding:24px">${t('hNone')}</div>`;
 }
+
+// ---------- 管理员：在历史记录里修改 / 作废 / 恢复 ----------
+const EXC_TYPES=['','晚到','车满/部分拒收','货未齐','车辆问题','其他'];
+function tzOffsetMs(tz, d){
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(d).map(x=>[x.type,x.value]));
+  return Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second)-d.getTime();
+}
+function toTzInput(iso, tz){ const d=new Date(iso); return new Date(d.getTime()+tzOffsetMs(tz,d)).toISOString().slice(0,16); }
+function fromTzInput(v, tz){ const [a,b]=v.split('T'); const [y,m,dd]=a.split('-').map(Number); const [hh,mi]=b.split(':').map(Number);
+  const g=Date.UTC(y,m-1,dd,hh,mi); let x=g-tzOffsetMs(tz,new Date(g)); x=g-tzOffsetMs(tz,new Date(x)); return new Date(x); }
+function amodal(html){ $('amodalBox').innerHTML=html; $('amodal').classList.add('on'); }
+function amodalClose(){ $('amodal').classList.remove('on'); }
+function renderAdminBar(){
+  if(!LIVE){ $('hAdmin').innerHTML=''; return; }
+  $('hRo').style.display = S.admin ? 'none' : '';
+  $('hAdmin').innerHTML = S.admin
+    ? `<div class="adm"><span>管理员模式：可修改、作废本仓记录（${esc(S.adminEmail||'')}）</span><button id="aLogout">退出</button></div>`
+    : `<div style="text-align:right;margin:-4px 0 8px"><button id="aLogin" style="background:none;border:0;color:var(--ink3);font-size:12px;text-decoration:underline">管理员登录</button></div>`;
+}
+async function checkAdmin(){
+  if(!LIVE) return;
+  const { data:{ session } } = await sbA.auth.getSession();
+  S.admin=false; S.adminEmail=session&&session.user&&session.user.email;
+  if(session){ const r=await sbA.rpc('is_admin'); S.admin=!!r.data; }
+  renderAdminBar();
+}
+function adminLogin(){
+  amodal(`<h3 style="margin:2px 0 4px">管理员登录</h3><div style="font-size:12px;color:var(--ink2)">登录后可在历史记录里修改、作废记录。仓库同事登记不需要登录。</div>
+    <label>邮箱<input id="aEmail" type="email" autocomplete="username"></label><label>密码<input id="aPwd" type="password" autocomplete="current-password"></label>
+    <div class="e" id="aErr"></div><button class="btn2 dark" id="aGo">登录</button><button class="btn2" id="aCancel">取消</button>`);
+  $('aCancel').onclick=amodalClose;
+  $('aGo').onclick=async()=>{ $('aErr').textContent='';
+    const { error } = await sbA.auth.signInWithPassword({ email:$('aEmail').value.trim(), password:$('aPwd').value });
+    if(error){ $('aErr').textContent='登录失败：'+error.message; return; }
+    await checkAdmin(); if(!S.admin){ $('aErr').textContent='该账号不在管理员名单里'; return; }
+    amodalClose(); loadHistory(); };
+}
+function adminEdit(id){
+  const r=(S.hRows||[]).find(x=>x.id===id); if(!r) return; const w=whObj(); const tz=(w&&w.tz)||'America/Los_Angeles';
+  amodal(`<h3 style="margin:2px 0 4px">修改记录</h3><div style="font-size:12px;color:var(--ink2)">${esc(w.code)} · 填报人 ${esc(r.reporter)} · 到达时间按仓库当地时间</div>
+    <div class="g2"><label>服务商<select id="eCarrier">${S.carriers.map(c=>`<option ${c.code===r.carrier?'selected':''}>${esc(c.code)}</option>`).join('')}</select></label>
+    <label>Trailer<input id="eTrailer" value="${esc(r.trailer_no)}"></label></div>
+    <label>到达时间<input id="eArrived" type="datetime-local" value="${toTzInput(r.arrived_at,tz)}"></label>
+    <div class="g2"><label>单量<input id="eOrders" type="number" min="0" step="1" inputmode="numeric" value="${r.orders??''}"></label>
+    <label>板数<input id="ePallets" type="number" min="0" step="1" inputmode="numeric" value="${r.pallets??''}"></label></div>
+    <label>异常<select id="eExc">${EXC_TYPES.map(x=>`<option value="${esc(x)}" ${x===(r.exception_type||'')?'selected':''}>${x||'无异常'}</option>`).join('')}</select></label>
+    <label>备注<input id="eNote" value="${esc(r.note||'')}"></label>
+    <div class="e" id="eErr"></div><button class="btn2 dark" id="eSave">保存修改</button><button class="btn2" id="eCancel">取消</button>`);
+  $('eCancel').onclick=amodalClose;
+  $('eSave').onclick=async()=>{
+    const trailer=$('eTrailer').value.trim().toUpperCase().replace(/\s+/g,'');
+    const num=k=>{ const v=$(k).value; return v===''?null:Math.max(0,Math.round(+v)); };
+    if(!trailer) return $('eErr').textContent='请填写 Trailer';
+    if(!$('eArrived').value) return $('eErr').textContent='请填写到达时间';
+    const arrived=fromTzInput($('eArrived').value,tz);
+    const patch={carrier:$('eCarrier').value, trailer_no:trailer, arrived_at:arrived.toISOString(), date:localDateIn(tz,arrived),
+      orders:num('eOrders'), pallets:num('ePallets'), exception_type:$('eExc').value||null, note:$('eNote').value.trim()||null};
+    $('eSave').disabled=true;
+    const { data, error } = await sbA.from('pickups').update(patch).eq('id',id).select('id');
+    $('eSave').disabled=false;
+    if(error) return $('eErr').textContent='保存失败：'+(error.code==='23505'?'与已有记录重复':error.message);
+    if(!data||!data.length) return $('eErr').textContent='保存失败：没有修改权限';
+    amodalClose(); loadHistory(); };
+}
+function adminVoid(id){
+  const r=(S.hRows||[]).find(x=>x.id===id); if(!r) return;
+  amodal(`<h3 style="margin:2px 0 4px">作废这条记录？</h3><div style="font-size:12px;color:var(--ink2)">${esc(r.carrier)} · ${esc(r.trailer_no)}。作废后不计入统计，记录保留可查，可以恢复。</div>
+    <label>作废原因<input id="vReason" placeholder="如：重复提交"></label><div class="e" id="vErr"></div>
+    <button class="btn2 dark" id="vGo">确认作废</button><button class="btn2" id="vCancel">取消</button>`);
+  $('vCancel').onclick=amodalClose;
+  $('vGo').onclick=async()=>{
+    const { data, error } = await sbA.from('pickups').update({voided:true, void_reason:$('vReason').value.trim()||'管理员作废'}).eq('id',id).select('id');
+    if(error) return $('vErr').textContent='作废失败：'+error.message;
+    if(!data||!data.length) return $('vErr').textContent='作废失败：没有修改权限';
+    amodalClose(); loadHistory(); };
+}
+async function adminUnvoid(id){
+  const { data, error } = await sbA.from('pickups').update({voided:false, void_reason:null}).eq('id',id).select('id');
+  if(error||!data||!data.length){ $('hList').insertAdjacentHTML('afterbegin',`<div class="err">恢复失败：${esc(error?error.message:'没有修改权限')}</div>`); return; }
+  loadHistory();
+}
+document.addEventListener('click', async e=>{
+  if(e.target.id==='aLogin') return adminLogin();
+  if(e.target.id==='aLogout'){ await sbA.auth.signOut(); S.admin=false; renderAdminBar(); return loadHistory(); }
+  if(e.target===$('amodal')) return amodalClose();
+  const a=e.target.closest('[data-aedit]'); if(a) return adminEdit(a.dataset.aedit);
+  const v=e.target.closest('[data-avoid]'); if(v) return adminVoid(v.dataset.avoid);
+  const u=e.target.closest('[data-aunvoid]'); if(u) return adminUnvoid(u.dataset.aunvoid);
+});
 function setTab(tab){
   S.tab=tab;
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
@@ -358,7 +467,7 @@ function setTab(tab){
   $('doneView').style.display='none';
   $('formView').style.display=isForm?'':'none';
   $('submitBar').style.display=isForm?'':'none';
-  if(!isForm){ renderHDate(); loadHistory(); }
+  if(!isForm){ renderHDate(); checkAdmin().finally(loadHistory); }
   window.scrollTo(0,0);
 }
 document.addEventListener('click', e=>{
