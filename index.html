@@ -323,7 +323,9 @@ const whOf = code => S.warehouses.find(w=>w.code===code) || {code,name:code,alia
 
 // "今天" = 美西日期（看板按日汇总口径）；演示模式固定为 11/27
 function todayPT(){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles'}).format(new Date()); }
-function refToday(){ if(!LIVE && S.demoActuals) return '2026-11-27'; return todayPT(); }
+// 测试视图：网址加 ?today=YYYY-MM-DD，按那天当作「今天」计算进度条/矩阵（不影响数据）
+const TEST_TODAY = (()=>{ const v=new URLSearchParams(location.search).get('today'); return /^\d{4}-\d{2}-\d{2}$/.test(v||'') ? v : null; })();
+function refToday(){ if(TEST_TODAY) return TEST_TODAY; if(!LIVE && S.demoActuals) return '2026-11-27'; return todayPT(); }
 function elapsedDates(){ const t=refToday(); return DATES.filter(d=>d<=t); }
 
 // ---------- 演示数据（仅演示模式，明确标注） ----------
@@ -635,6 +637,7 @@ function renderDetail(){
 function renderBanner(){
   let h='';
   if(!LIVE) h=`<div class="banner"><span>${S.demoActuals?'<b>正在显示演示数据</b>：实际值为随机生成，仅用于预览看板效果（假设今天是 11/27）。':'<b>演示模式</b>：尚未连接数据库，看板只显示预测。部署后仓库提交的数据会自动累计到这里。'}</span><button class="btn sm" id="btnDemo">${S.demoActuals?'清除演示数据':'填充演示实际数据'}</button></div>`;
+  if(TEST_TODAY) h=`<div class="banner" style="background:#fff4e5;color:#8a4b00"><span><b>测试视图</b>：按 ${md(TEST_TODAY)} 当作「今天」计算进度条和矩阵（真实今天是 ${md(todayPT())}）。</span><a class="btn sm" href="${location.pathname}" style="text-decoration:none;color:inherit">回到真实日期</a></div>`+h;
   $('banner').innerHTML=h;
   const b=$('btnDemo'); if(b) b.onclick=()=>{S.demoActuals=!S.demoActuals; S.pickups=S.demoActuals?makeDemoActuals():[]; [S.daily,S.dailyActual]=S.demoActuals?makeDemoDaily():[[],[]]; renderAll();};
 }
