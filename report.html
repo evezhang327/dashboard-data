@@ -172,6 +172,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
 
 <script>
 const BOOT = {"warehouses":[{"code":"LAX-LG-1-US","name":"洛杉矶大件1号仓","alias":"LAX1","region":"LA","tz":"America/Los_Angeles"},{"code":"ONT-SM-2-US","name":"洛杉矶中小件2号仓","alias":"LAX2","region":"LA","tz":"America/Los_Angeles"},{"code":"ONT-LG-4-US","name":"洛杉矶大件4号仓","alias":"LAX4","region":"LA","tz":"America/Los_Angeles"},{"code":"ONT-LG-5-US","name":"洛杉矶大件5号仓","alias":"LAX5","region":"LA","tz":"America/Los_Angeles"},{"code":"LAS-CS-1-US","name":"拉斯维加斯定制1号仓","alias":"LAS","region":"LAS","tz":"America/Los_Angeles"},{"code":"EWR-LG-1-US","name":"新泽西大件1号仓","alias":"NYC1","region":"NJ","tz":"America/New_York"},{"code":"EWR-SM-2-US","name":"新泽西中小件2号仓","alias":"NYC2","region":"NJ","tz":"America/New_York"},{"code":"EWR-SM-3-US","name":"新泽西中小件3号仓","alias":"NYC3","region":"NJ","tz":"America/New_York"},{"code":"EWR-SM-4-US","name":"新泽西中小件4号仓","alias":"NJ4","region":"NJ","tz":"America/New_York"},{"code":"EWR-LG-5-US","name":"新泽西大件5号仓","alias":"NYC5","region":"NJ","tz":"America/New_York"},{"code":"ATL-SM-1-US","name":"亚特兰大中小件1号仓","alias":"ATL1","region":"ATL","tz":"America/New_York"},{"code":"ATL-SM-2-US","name":"亚特兰大中小件2号仓","alias":"ATL2","region":"ATL","tz":"America/New_York"},{"code":"HOU-SM-1-US","name":"休斯敦中小件1号仓","alias":"HOU1","region":"HOU","tz":"America/Chicago"}],"carriers":[{"code":"USPS","unit":"truck"},{"code":"UPS","unit":"truck"},{"code":"FedEx","unit":"truck"},{"code":"DHL","unit":"truck"},{"code":"GOFO","unit":"pallet"},{"code":"UNIUNI","unit":"pallet"},{"code":"Speedx","unit":"pallet"}]};
+BOOT.carriers = BOOT.carriers.flatMap(c=>c.code==='FedEx'?[{code:'FedEx Ground',unit:'truck'},{code:'FedEx Express',unit:'truck'}]:[c]);
 const CFG = window.APP_CONFIG || {};
 const LIVE = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY && window.supabase);
 const sb = LIVE ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {auth:{persistSession:false}}) : null;
@@ -478,7 +479,7 @@ async function boot(){
   if(LIVE){
     const [w,c]=await Promise.all([sb.from('warehouses').select('code,name,alias,region,tz').order('code'), sb.from('carriers').select('code,unit')]);
     if(!w.error && w.data.length) S.warehouses=w.data;
-    if(!c.error && c.data.length){ const order=['USPS','UPS','FedEx','DHL','GOFO','UNIUNI','Speedx']; S.carriers=c.data.sort((a,b)=>order.indexOf(a.code)-order.indexOf(b.code)); }
+    if(!c.error && c.data.length){ const order=['USPS','UPS','FedEx Ground','FedEx Express','DHL','GOFO','UNIUNI','Speedx']; S.carriers=c.data.sort((a,b)=>order.indexOf(a.code)-order.indexOf(b.code)); }
   } else { $('demoNote').style.display=''; }
   renderWh();
   $('arrived').value=localInputValue(new Date());
