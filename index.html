@@ -698,7 +698,7 @@ function renderDailyHero(){
   const lbl = day===today ? '今日' : `${md(day)} 周${wd(day)}`;
   $('hero').innerHTML = `
     <img class="joy" src="${JOY_DAILY}" alt="">
-    <div class="lbl"><span class="pill-fc">日常模式</span> ${lbl} 预测出库单量 · iWMS 早上预估（已到单 ÷ 历史同时点到单比例）· 京东尾程</div>
+    <div class="lbl"><span class="pill-fc">日常模式</span> ${lbl} 预测出库单量 · 京东尾程</div>
     <div class="big"><b>${fc?fmt(fc):'—'}</b><span>${fc?'单（早上预测）':(day===today?'今天的早上预测还没跑（东部 06:00 / 西部 09:00）':'这天没有早上预测')}</span></div>
     <div class="prog">
       <div class="prog-head">
@@ -786,9 +786,9 @@ function renderModeChrome(){
   $('modeSwitch').style.display = LIVE ? '' : 'none'; document.body.classList.toggle('daily', !!daily);
   $('btnMode').checked = !daily;
   $('hdrTitle').textContent = daily ? '日常提货看板' : '大促提货看板';
-  document.title = daily ? '日常提货看板 · iWMS 早上预测 vs 实际' : '大促提货看板 · 2026 Black Friday';
+  document.title = daily ? '日常提货看板 · 早上当日预测 vs 实际' : '大促提货看板 · 2026 Black Friday';
   $('hdrSub').textContent = daily
-    ? `日常模式 · iWMS 早上预测 vs 实际做货 · 13 个自营仓 · 大促 11/20–12/4 期间自动切换为大促模式`
+    ? `日常模式 · 早上当日预测 vs 实际做货 · 13 个自营仓 · 大促 11/20–12/4 期间自动切换为大促模式`
     : '2026 Black Friday · 11/20 – 12/4 · 13 个自营仓 · 8 家服务商 · 预测 vs 实际到车';
   $('c1Title').textContent = daily ? '近 14 天单量：早上预测 vs iWMS 实际做货' : '每日单量：黑五预测 / 日均预测 / 实际货量';
   $('c1Legend').innerHTML = daily ? '<span><i style="background:var(--fc)"></i>早上预测</span><span><i style="background:var(--blue)"></i>iWMS 实际需做</span>'
