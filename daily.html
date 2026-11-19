@@ -202,7 +202,7 @@ async function loadLive(){
     sb.from('daily_actual').select('*').gte('date',from).limit(20000),
   ]);
   for(const x of [w,r,a]) if(x.error) throw x.error;
-  if(w.data.length) S.warehouses=w.data.filter(x=>!EXCLUDED.has(x.code));
+  if(w.data.length) S.warehouses=w.data.filter(x=>!EXCLUDED.has(x.code) && x.forecast_enabled!==false);
   S.runs=r.data; S.actual=a.data; S.lines={};
   try{
     const [f,p]=await Promise.all([sb.from('forecast').select('date,warehouse,carrier,fc_units,fc_orders').limit(5000), sb.from('pickups').select('date,warehouse,carrier,orders,pallets,voided').gte('date',from).limit(20000)]);
