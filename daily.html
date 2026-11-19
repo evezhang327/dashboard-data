@@ -333,9 +333,10 @@ async function renderAll(){
     if(!run){ const st=PENDING[w.code]?`<span class="tag">${PENDING[w.code]}</span>`:err?`<span class="tag bad">失败</span> <span class="hint">${esc(String(err.error).slice(0,40))}</span>`:'<span class="tag">未运行</span>';
       return `<tr><td><span class="wh-link" data-wh="${w.code}">${esc(w.code)}</span><div class="hint">${esc(w.wms_code||'')} · ${esc(w.name)}</div></td><td>${st}</td><td colspan="9"></td></tr>`; }
     const need=act.reduce((s,a)=>s+a.due-a.pre_done,0), done=act.reduce((s,a)=>s+a.done-a.pre_done,0);
-    T.e+=run.total_est;T.a+=run.total_arrived;T.g+=run.gaylord;T.p+=run.pallets;T.v+=run.trucks;T.bl+=run.backlog||0; if(act.length){T.need+=need;T.done+=done;T.me+=mrun?mrun.total_est:run.total_est;T.has++;}
+    const m0=runsOf(w.code,d).filter(r=>r.status==='ok'&&r.run_type==='morning')[0];   // 当天第一次早上运行 = 早上预测
+    T.e+=m0?m0.total_est:0;T.a+=run.total_arrived;T.g+=run.gaylord;T.p+=run.pallets;T.v+=run.trucks;T.bl+=run.backlog||0; if(act.length){T.need+=need;T.done+=done;T.me+=mrun?mrun.total_est:run.total_est;T.has++;}
     return `<tr><td><span class="wh-link" data-wh="${w.code}">${esc(w.code)}</span><div class="hint">${esc(w.wms_code||'')} · ${esc(w.name)}</div></td><td>${({evening:'傍晚',manual:'',morning:'早上'}[run.run_type] ?? '早上')} ${localTime(run)}${err&&err.run_at>run.run_at?' <span class="tag bad">最近失败</span>':''}</td>
-      <td class="num"><b>${fmt(run.total_est)}</b></td><td class="num">${fmt(run.total_arrived)}</td><td class="num">${fmt(run.gaylord)}</td><td class="num">${fmt(run.pallets)}</td><td class="num">${fmt(run.trucks)}</td><td class="num">${run.backlog?`<span style="color:var(--bad)">${fmt(run.backlog)}</span>`:'0'}</td>
+      <td class="num"><b>${m0?fmt(m0.total_est):'—'}</b></td><td class="num">${fmt(run.total_arrived)}</td><td class="num">${fmt(run.gaylord)}</td><td class="num">${fmt(run.pallets)}</td><td class="num">${fmt(run.trucks)}</td><td class="num">${run.backlog?`<span style="color:var(--bad)">${fmt(run.backlog)}</span>`:'0'}</td>
       <td class="num bl">${act.length?fmt(need):'—'}</td><td class="num">${act.length?rateTag(done,need):'—'}</td><td class="num">${act.length?errTag(mrun?mrun.total_est:run.total_est,need):'—'}</td></tr>`;}).join('');
   // 全美按服务商
   const byC={}; runs.forEach(({run})=>{ if(!run) return; (S.lines[run.id]||[]).forEach(l=>{ const k=l.cat+'|'+l.carrier; const o=byC[k]=byC[k]||{cat:l.cat,carrier:l.carrier,est:0,arr:0,g:0,p:0,v:0,n:0}; o.est+=l.est;o.arr+=l.arrived;o.g+=l.gaylord||0;o.p+=l.pallets||0;o.v+=l.trucks||0;o.n++; }); });
@@ -344,11 +345,11 @@ async function renderAll(){
   $('view').innerHTML=`
   <section class="hero"><img class="joy" src="${JOY}" alt="">
     <div class="lbl">${S.runs.some(r=>r.demo)?'<span class="tag" style="margin:0 8px 0 0">演示数据</span>':''}全美自营仓 · ${md(d)} 周${wd(d)} 今日出库预测（${live} / ${ws.filter(w=>!PENDING[w.code]).length} 个仓已出结果）</div>
-    <div class="big"><b>${fmt(T.e)}</b><span>今日预报单量（已到 ${fmt(T.a)}）</span></div>
+    <div class="big"><b>${fmt(T.e)}</b><span>早上预测单量（当前实际 ${fmt(T.a)}）</span></div>
     <div class="grid"><div><small>Gaylord</small><b>${fmt(T.g)}</b></div><div><small>托盘</small><b>${fmt(T.p)}</b></div><div><small>预派车提货</small><b>${fmt(T.v)}</b></div><div><small>积压单量</small><b>${fmt(T.bl)}</b></div><div><small>早上预测误差</small><b>${T.has?((T.me-T.need)/T.need*100).toFixed(1)+'%':'—'}</b></div></div>
   </section>
   <section class="card panel"><div class="ph"><h2>各仓今日预测</h2><span class="hint">点仓库编码查看服务商明细</span></div>
-    <div class="tbl-wrap"><table><thead><tr><th>仓库</th><th>最近运行（当地）</th><th class="num">预估单量</th><th class="num">已到</th><th class="num">Gaylord</th><th class="num">托盘</th><th class="num">预派车</th><th class="num">积压</th><th class="num bl">实际需做</th><th class="num">完成率</th><th class="num">早上预测误差</th></tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>仓库</th><th>最近运行（当地）</th><th class="num">早上预测</th><th class="num">当前实际单量</th><th class="num">Gaylord</th><th class="num">托盘</th><th class="num">预派车</th><th class="num">积压</th><th class="num bl">实际需做</th><th class="num">完成率</th><th class="num">早上预测误差</th></tr></thead>
     <tbody>${rows}<tr class="total"><td>合计</td><td></td><td class="num">${fmt(T.e)}</td><td class="num">${fmt(T.a)}</td><td class="num">${fmt(T.g)}</td><td class="num">${fmt(T.p)}</td><td class="num">${fmt(T.v)}</td><td class="num">${fmt(T.bl)}</td><td class="num bl">${T.has?fmt(T.need):'—'}</td><td class="num">${T.has?rateTag(T.done,T.need):'—'}</td><td class="num">${T.has?errTag(T.me,T.need):'—'}</td></tr></tbody></table></div></section>
   <section class="card panel"><div class="ph"><h2>全美按服务商</h2></div>
     <div class="tbl-wrap"><table><thead><tr><th>服务商</th><th class="num">预估单量</th><th class="num">已到</th><th class="num">Gaylord / 托盘</th><th class="num">预派车</th><th class="num">覆盖仓数</th></tr></thead><tbody>${cRows||'<tr><td colspan="6" class="empty">暂无</td></tr>'}</tbody></table></div></section>`;
