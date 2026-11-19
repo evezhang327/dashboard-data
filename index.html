@@ -712,7 +712,7 @@ function reviewInfo(day){   // 早上之后最近一次复核（15:00 / 18:00 / 
 }
 function latestLine(day){
   const v=reviewInfo(day); if(!v) return '';
-  return `<div class="latest">复核 <b>${tPT(v.t)}</b>（美西）· 当时实际单量 <b>${fmt(v.arr)}</b> 单${v.fc?` · 比早上预测 ${v.d>=0?'+':''}${fmt(v.d)}（${v.d>=0?'+':''}${(v.d/v.fc*100).toFixed(1)}%）`:''}${v.all?'':` · ${v.n} 个仓已复核`}</div>`;
+  return `<div class="latest"><b>${tPT(v.t)}</b>（美西）· 当时实际单量 <b>${fmt(v.arr)}</b> 单${v.fc?` · 比早上预测 ${v.d>=0?'+':''}${fmt(v.d)}（${v.d>=0?'+':''}${(v.d/v.fc*100).toFixed(1)}%）`:''}${v.all?'':` · ${v.n} 个仓已更新`}</div>`;
 }
 function renderDailyHero(){
   const day=S.dDate||refToday(), today=refToday();
@@ -727,22 +727,22 @@ function renderDailyHero(){
   $('hero').innerHTML = `
     <img class="joy" src="${JOY_DAILY}" alt="">
     <div class="lbl"><span class="pill-fc">日常模式</span> ${lbl} 预测出库单量 · 京东尾程</div>
-    <div class="big"><b>${fc?fmt(fc):'—'}</b><span>${fc?'单（早上预测）':(day===today?'今天的早上预测还没跑（东部 06:00 / 西部 09:00）':'这天没有早上预测')}</span></div>
+    <div class="big"><b>${fc?fmt(fc):'—'}</b><span>${fc?'单（早上预测）':(day===today?'今天的早上预测还没跑（各仓当地 09:00）':'这天没有早上预测')}</span></div>
     ${latestLine(day)}
     <div class="prog">
       <div class="prog-head">
-        ${rv ? `<span><i class="sw-act"></i>复核实际单量 <b>${fmt(rv.arr)}</b> 单 · 占预测 <b>${fc?rvPct.toFixed(1)+'%':'—'}</b></span>
-        <span class="prog-src">${tPT(rv.t)} 复核（美西）· 实际做货将在复核时写入</span>`
+        ${rv ? `<span><i class="sw-act"></i>实际单量 <b>${fmt(rv.arr)}</b> 单 · 占预测 <b>${fc?rvPct.toFixed(1)+'%':'—'}</b></span>
+        <span class="prog-src">更新于 ${tPT(rv.t)}（美西）</span>`
         : `<span><i class="sw-act"></i>实际做货 <b>${hasA?fmt(ac):'—'}</b> 单 · 占预测 <b>${hasA&&fc?pAct.toFixed(1)+'%':'—'}</b></span>
-        <span class="prog-src">实际口径：实际需做（每次复核写入：15:00 / 18:00 / 管理员刷新，次日早上定稿）</span>`}
+        <span class="prog-src">实际口径：实际需做（各仓当地 15:00 / 19:00 及管理员刷新时更新，次日早上定稿）</span>`}
       </div>
       <div class="prog-bar" title="红色 = 实际做货 ÷ 早上预测">
         <i class="act" style="width:${Math.min(100,S._lastPct??0)}%"></i>
         <img class="runner runner-fly" src="${JOY_FLY}" alt="" style="left:${Math.min(100,S._lastPct??0)}%">
       </div>
       <div class="prog-foot">${hasA ? `早上预测 ${fmt(fc)} 单 · 实际需做 ${fmt(ac)} 单 · <b>预测误差 ${err==null?'—':(err>=0?'+':'')+err.toFixed(1)+'%'}</b>`
-        : rv ? `早上预测 ${fmt(fc)} 单 · ${tPT(rv.t)} 复核实际 ${fmt(rv.arr)} 单 · 差 ${rv.d>=0?'+':''}${fmt(rv.d)}${rv.fc?'（'+(rv.d>=0?'+':'')+(rv.d/rv.fc*100).toFixed(1)+'%）':''}${rv.all?'':' · '+rv.n+' 个仓已复核'}`
-        : (day===today ? '实际做货在 15:00 / 18:00 定时复核或管理员刷新时写入；在那之前先看下方的到车登记' : '这天还没有实际做货数据')}</div>
+        : rv ? `早上预测 ${fmt(fc)} 单 · ${tPT(rv.t)} 实际 ${fmt(rv.arr)} 单 · 差 ${rv.d>=0?'+':''}${fmt(rv.d)}${rv.fc?'（'+(rv.d>=0?'+':'')+(rv.d/rv.fc*100).toFixed(1)+'%）':''}${rv.all?'':' · '+rv.n+' 个仓已更新'}`
+        : (day===today ? '实际做货在各仓当地 15:00 / 19:00 或管理员刷新时更新；在那之前先看下方的到车登记' : '这天还没有实际做货数据')}</div>
     </div>
     <div class="grid">
       <div><small>已出早上预测的仓库</small><b>${ran.size} / ${en.length}</b></div>
@@ -825,7 +825,7 @@ function renderModeChrome(){
   $('c1Title').textContent = daily ? '近 14 天单量：早上预测 vs 实际做货' : '每日单量：黑五预测 / 日均预测 / 实际货量';
   $('c1Legend').innerHTML = daily ? '<span><i style="background:var(--fc)"></i>早上预测</span><span><i style="background:var(--blue)"></i>实际需做</span>'
     : '<span><i style="background:var(--fc)"></i>黑五预测</span><span><i style="background:var(--orange);border-radius:50%"></i>日均预测</span><span><i style="background:var(--blue)"></i>实际货量</span>';
-  $('c1Hint').textContent = daily ? '早上预测：各仓当天第一次早上运行（东部 06:00 / 西部 09:00）的全天预估 = 已到单 ÷ 历史同时点到单比例；实际需做：截单当天应做 − 提前做完（每次复核写入：15:00 / 18:00 / 刷新，次日早上定稿）。京东尾程。点柱子切到当天。'
+  $('c1Hint').textContent = daily ? '早上预测：各仓当地 09:00 早上运行的全天预估 = 已到单 ÷ 历史同时点到单比例；实际需做：截单当天应做 − 提前做完（各仓当地 15:00 / 19:00 及刷新时更新，次日早上定稿）。京东尾程。点柱子切到当天。'
     : '黑五预测：大促预测表；日均预测：每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量可切换口径。点柱子可切到当天。';
   $('c2Title').textContent = daily ? '近 14 天到车：预派车 vs 登记实际到车' : '每日到车：预测 vs 实际';
   $('c2Legend').innerHTML = daily ? '<span><i style="background:var(--fc)"></i>预派车</span><span><i style="background:var(--blue)"></i>登记实际到车</span>'
