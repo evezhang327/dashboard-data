@@ -423,6 +423,7 @@ function subscribeLive(){
 // ---------- 过滤 ----------
 function whPass(code){
   const w=whOf(code);
+  if(S.mode==='daily' && w.forecast_enabled===false) return false;   // 日常模式隐藏不做日均预测的仓（如 ATL-SM-1）
   if(S.f.wh!=='ALL' && code!==S.f.wh) return false;
   if(S.f.region!=='ALL' && w.region!==S.f.region) return false;
   return true;
@@ -465,7 +466,7 @@ function renderFilters(){
   if(S.mode!=='daily') ds.value=cur;
   $('fCarrier').innerHTML = CARRIER_ORDER.map(c=>`<span class="chip ${S.f.carriers.has(c)?'on':''}" data-c="${c}">${c}</span>`).join('');
   $('fRegion').innerHTML = REGIONS.map(([k,v])=>`<span class="chip ${S.f.region===k?'on':''}" data-r="${k}">${v}</span>`).join('');
-  const whs=S.warehouses.filter(w=>S.f.region==='ALL'||w.region===S.f.region);
+  const whs=S.warehouses.filter(w=>(S.f.region==='ALL'||w.region===S.f.region) && !(S.mode==='daily' && w.forecast_enabled===false));
   $('fWh').innerHTML = `<option value="ALL">全部仓库（${whs.length}）</option>`+whs.map(w=>`<option value="${w.code}">${esc(w.code)} · ${esc(w.name)}</option>`).join('');
   $('fWh').value = whs.some(w=>w.code===S.f.wh)? S.f.wh : 'ALL'; S.f.wh=$('fWh').value;
 }
