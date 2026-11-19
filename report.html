@@ -225,7 +225,7 @@ function renderWh(){
   if(S.warehouses.some(w=>w.code===pre)) $('wh').value=pre;
 }
 function renderCarriers(){
-  $('carriers').innerHTML = S.carriers.map(c=>`<div class="opt ${S.carrier===c.code?'on':''}" data-carrier="${esc(c.code)}">${esc(c.code)}<small>${c.unit==='pallet'?t('unitP'):t('unitT')}</small></div>`).join('');
+  $('carriers').innerHTML = S.carriers.map(c=>`<div class="opt ${S.carrier===c.code?'on':''}" data-carrier="${esc(c.code)}">${esc(c.code)}</div>`).join('');
   const unit=(S.carriers.find(c=>c.code===S.carrier)||{}).unit;
 }
 function renderExc(){
