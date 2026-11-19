@@ -702,15 +702,15 @@ function renderDailyHero(){
     <div class="big"><b>${fc?fmt(fc):'—'}</b><span>${fc?'单（早上预测）':(day===today?'今天的早上预测还没跑（东部 06:00 / 西部 09:00）':'这天没有早上预测')}</span></div>
     <div class="prog">
       <div class="prog-head">
-        <span><i class="sw-act"></i>iWMS 实际做货 <b>${hasA?fmt(ac):'—'}</b> 单 · 占预测 <b>${hasA&&fc?pAct.toFixed(1)+'%':'—'}</b></span>
-        <span class="prog-src">实际口径：iWMS 实际需做（傍晚 18:00 写入，次日早上复核）</span>
+        <span><i class="sw-act"></i>实际做货 <b>${hasA?fmt(ac):'—'}</b> 单 · 占预测 <b>${hasA&&fc?pAct.toFixed(1)+'%':'—'}</b></span>
+        <span class="prog-src">实际口径：实际需做（傍晚 18:00 写入，次日早上复核）</span>
       </div>
-      <div class="prog-bar" title="红色 = iWMS 实际做货 ÷ 早上预测">
+      <div class="prog-bar" title="红色 = 实际做货 ÷ 早上预测">
         <i class="act" style="width:${Math.min(100,S._lastPct??0)}%"></i>
         <img class="runner runner-fly" src="${JOY_FLY}" alt="" style="left:${Math.min(100,S._lastPct??0)}%">
       </div>
       <div class="prog-foot">${hasA ? `早上预测 ${fmt(fc)} 单 · 实际需做 ${fmt(ac)} 单 · <b>预测误差 ${err==null?'—':(err>=0?'+':'')+err.toFixed(1)+'%'}</b>`
-        : (day===today ? '当天的实际做货在傍晚 18:00 写入；白天先看下方的到车登记' : '这天还没有 iWMS 实际做货数据')}</div>
+        : (day===today ? '当天的实际做货在傍晚 18:00 写入；白天先看下方的到车登记' : '这天还没有实际做货数据')}</div>
     </div>
     <div class="grid">
       <div><small>已出早上预测的仓库</small><b>${ran.size} / ${en.length}</b></div>
@@ -743,7 +743,7 @@ function renderDailyCharts(){
   const st=dd.map(d=>({date:d, fc:sumBy(dLines(d),'trucks'), ac:pkRows([d]).length}));
   const errs=dailyErrs(), mape=errs.length? errs.reduce((t,x)=>t+Math.abs(x.e),0)/errs.length : null;
   $('ordersSum').textContent = mape==null ? '有实际做货后显示预测误差' : `近 ${errs.length} 天平均绝对误差 ${mape.toFixed(1)}%`;
-  barChart($('chartOrders'), so, {unit:'单', label:'近 14 天早上预测与 iWMS 实际做货', daily:true, acLabel:'iWMS 实际需做'});
+  barChart($('chartOrders'), so, {unit:'单', label:'近 14 天早上预测与实际做货', daily:true, acLabel:'实际需做'});
   barChart($('chartTrucks'), st, {unit:'车', label:'近 14 天预派车与登记实际到车', h:250, daily:true, acLabel:'登记实际到车'});
 }
 function renderDailyMatrix(){
@@ -790,10 +790,10 @@ function renderModeChrome(){
   $('hdrSub').textContent = daily
     ? `日常模式 · 早上当日预测 vs 实际做货 · 13 个自营仓 · 大促 11/20–12/4 期间自动切换为大促模式`
     : '2026 Black Friday · 11/20 – 12/4 · 13 个自营仓 · 8 家服务商 · 预测 vs 实际到车';
-  $('c1Title').textContent = daily ? '近 14 天单量：早上预测 vs iWMS 实际做货' : '每日单量：黑五预测 / 日均预测 / 实际货量';
-  $('c1Legend').innerHTML = daily ? '<span><i style="background:var(--fc)"></i>早上预测</span><span><i style="background:var(--blue)"></i>iWMS 实际需做</span>'
+  $('c1Title').textContent = daily ? '近 14 天单量：早上预测 vs 实际做货' : '每日单量：黑五预测 / 日均预测 / 实际货量';
+  $('c1Legend').innerHTML = daily ? '<span><i style="background:var(--fc)"></i>早上预测</span><span><i style="background:var(--blue)"></i>实际需做</span>'
     : '<span><i style="background:var(--fc)"></i>黑五预测</span><span><i style="background:var(--orange);border-radius:50%"></i>日均预测</span><span><i style="background:var(--blue)"></i>实际货量</span>';
-  $('c1Hint').textContent = daily ? '早上预测：各仓当天第一次早上运行（东部 06:00 / 西部 09:00）的全天预估 = 已到单 ÷ 历史同时点到单比例；实际需做：iWMS 截单当天应做 − 提前做完（傍晚 18:00 写入，次日早上复核）。京东尾程。点柱子切到当天。'
+  $('c1Hint').textContent = daily ? '早上预测：各仓当天第一次早上运行（东部 06:00 / 西部 09:00）的全天预估 = 已到单 ÷ 历史同时点到单比例；实际需做：截单当天应做 − 提前做完（傍晚 18:00 写入，次日早上复核）。京东尾程。点柱子切到当天。'
     : '黑五预测：大促预测表；日均预测：iWMS 每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量可切换口径。点柱子可切到当天。';
   $('c2Title').textContent = daily ? '近 14 天到车：预派车 vs 登记实际到车' : '每日到车：预测 vs 实际';
   $('c2Legend').innerHTML = daily ? '<span><i style="background:var(--fc)"></i>预派车</span><span><i style="background:var(--blue)"></i>登记实际到车</span>'
