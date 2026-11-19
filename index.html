@@ -406,6 +406,9 @@ async function loadDaily(){
   S.dRuns = Object.values(first);                                  // 每仓每天的「当天第一次早上运行」= 当天预测
   const ids=S.dRuns.map(x=>x.id); const out=[];
   for(let i=0;i<ids.length;i+=150){ const q=await sb.from('daily_forecast').select('warehouse,date,cat,carrier,est,gaylord,pallets,trucks').in('run_id',ids.slice(i,i+150)).eq('cat','京东尾程').limit(10000); if(q.error) throw q.error; out.push(...q.data); }
+  const fid=new Set(ids), lid=S.dLatest.map(x=>x.id).filter(id=>!fid.has(id)), lo=[];   // 早上之后的复核（15:00 / 18:00 / 刷新）
+  for(let i=0;i<lid.length;i+=150){ const q=await sb.from('daily_forecast').select('warehouse,date,carrier,arrived').in('run_id',lid.slice(i,i+150)).eq('cat','京东尾程').limit(10000); if(q.error) throw q.error; lo.push(...q.data); }
+  S.dlReview = lo.filter(l=>DAILY_PEAK[l.carrier]).map(l=>({date:l.date, warehouse:l.warehouse, carrier:DAILY_PEAK[l.carrier], arrived:l.arrived||0}));
   S.dl = out.filter(l=>DAILY_PEAK[l.carrier]).map(l=>({date:l.date, warehouse:l.warehouse, carrier:DAILY_PEAK[l.carrier], est:l.est||0, gaylord:l.gaylord||0, pallets:l.pallets||0, trucks:l.trucks||0}));
   S.daily = S.dl.map(l=>({date:l.date, warehouse:l.warehouse, carrier:l.carrier, est:l.est}));
   const a = await sb.from('daily_actual').select('warehouse,date,cat,carrier,due,pre_done').eq('cat','京东尾程').gte('date',rf).lte('date',rt).limit(20000);
@@ -699,11 +702,13 @@ const JOY_DAILY='data:image/webp;base64,UklGRvAbAABXRUJQVlA4WAoAAAAQAAAA4wAAzwAA
 function tPT(iso){ return iso ? new Date(iso).toLocaleTimeString('zh-CN',{timeZone:'America/Los_Angeles',hour:'2-digit',minute:'2-digit',hour12:false}) : ''; }
 function latestLine(day){
   const first=new Set((S.dRuns||[]).map(r=>r.id));
-  const L=(S.dLatest||[]).filter(r=>r.date===day && whPass(r.warehouse));
-  if(!L.length || L.every(r=>first.has(r.id))) return '';
-  const est=L.reduce((a,r)=>a+(+r.total_est||0),0), arr=L.reduce((a,r)=>a+(+r.total_arrived||0),0);
-  const t=L.map(r=>r.run_at).sort().pop();
-  return `<div class="latest">最新更新 <b>${tPT(t)}</b>（美西）· 全天预估 <b>${fmt(est)}</b> 单 · 已到 <b>${fmt(arr)}</b> 单</div>`;
+  const L=(S.dLatest||[]).filter(r=>r.date===day && whPass(r.warehouse) && !first.has(r.id));
+  if(!L.length) return '';
+  const whs=new Set(L.map(r=>r.warehouse));
+  const arr=sumBy((S.dlReview||[]).filter(r=>r.date===day&&S.f.carriers.has(r.carrier)&&whs.has(r.warehouse)),'arrived');
+  const fc=sumBy(dLines(day).filter(r=>whs.has(r.warehouse)),'est');
+  const t=L.map(r=>r.run_at).sort().pop(), d=arr-fc;
+  return `<div class="latest">复核 <b>${tPT(t)}</b>（美西）· 当时实际单量 <b>${fmt(arr)}</b> 单${fc?` · 比早上预测 ${d>=0?'+':''}${fmt(d)}（${d>=0?'+':''}${(d/fc*100).toFixed(1)}%）`:''}${whs.size<(S.dRuns||[]).filter(r=>r.date===day&&whPass(r.warehouse)).length?` · ${whs.size} 个仓已复核`:''}</div>`;
 }
 function renderDailyHero(){
   const day=S.dDate||refToday(), today=refToday();
