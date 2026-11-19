@@ -129,7 +129,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
   <div class="card">
     <div class="row">
       <div><div class="lbl"><span><span data-t="orders"></span></span><small data-t="optional"></small></div><input type="number" id="orders" inputmode="numeric" min="0" step="1" placeholder="0"></div>
-      <div><div class="lbl"><span><span data-t="pallets"></span><span id="palletReq" style="display:none"></span></span><small data-t="optional"></small></div><input type="number" id="pallets" inputmode="numeric" min="0" step="1" placeholder="0"></div>
+      <div><div class="lbl"><span><span data-t="pallets"></span><span class="req">*</span></span></div><input type="number" id="pallets" inputmode="numeric" min="0" step="1" placeholder="0"></div>
     </div>
   </div>
 
@@ -182,13 +182,13 @@ const T = {
   zh:{title:'提货车辆登记',wh:'仓库',carrier:'服务商',trailer:'Trailer Number（车厢号）',trailerHint:'以车厢上的号码为准',arrived:'到达时间',now:'现在',orders:'本车交接单量',pallets:'板数',photos:'照片',photoHint:'车厢号 / 装车照片，最多 6 张',addPhoto:'拍照',exception:'异常情况',notePh:'请简要说明异常（选填）',reporter:'填报人姓名',submit:'提交登记',
       demo:'演示模式：尚未连接数据库，提交不会保存。',
       excs:[['','无异常'],['晚到','晚到'],['车满/部分拒收','车满/部分拒收'],['货未齐','货未齐'],['车辆问题','车辆问题'],['其他','其他']],
-      e_wh:'请选择仓库',e_carrier:'请选择服务商',e_trailer:'请填写 Trailer Number',e_arrived:'请填写到达时间',e_orders:'单量不能为负数',e_pallets:'板数不能为负数',optional:'选填',e_photo:'请至少拍 1 张照片',e_reporter:'请填写填报人',e_note:'选择"其他"时请填写说明',
+      e_wh:'请选择仓库',e_carrier:'请选择服务商',e_trailer:'请填写 Trailer Number',e_arrived:'请填写到达时间',e_orders:'单量不能为负数',e_pallets:'板数不能为负数',e_pallets_req:'请填写板数（没有打板请填 0）',optional:'选填',e_photo:'请至少拍 1 张照片',e_reporter:'请填写填报人',e_note:'选择"其他"时请填写说明',
       uploading:'正在上传照片…',saving:'正在提交…',okTitle:'登记成功',again:'继续登记下一辆',dup:'这辆车已经登记过（同仓库、服务商、车厢号和到达时间），请勿重复提交。',
       fail:'提交失败，请检查网络后重试：',tabForm:'登记',tabHistory:'历史记录',readonly:'只读：可查看本仓已提交的记录，不能修改。备注：若错误提交需要修改，请联系运配管理员。',fixNote:'备注：若错误提交需要修改，请联系运配管理员。',refresh:'刷新',hToday:'今天',hYesterday:'昨天',hAll:'大促全部（11/20–12/4）',hAllCarrier:'全部',hSearch:'搜索 Trailer / 填报人',hTrucks:'车',hOrders:'单',hPallets:'板',hNone:'没有记录',hVoid:'已作废',hPhotos:'张照片',hBy:'填报',hLoading:'加载中…',hErr:'查询失败：',hPickWh:'请先在「登记」页选择仓库',todayTitle:'今日本仓已登记',trucks:'车',none:'今天还没有登记',unitT:'按车',unitP:'按板',confirmDup:'今天这个 Trailer 已登记过，确定再次提交吗？再点一次提交确认。'},
   en:{title:'Pickup Check-in',wh:'Warehouse',carrier:'Carrier',trailer:'Trailer Number',trailerHint:'As shown on the trailer',arrived:'Arrival time',now:'Now',orders:'Orders handed over',pallets:'Pallets',photos:'Photos',photoHint:'Trailer no. / loading, up to 6',addPhoto:'Camera',exception:'Exception',notePh:'Describe the issue (optional)',reporter:'Your name',submit:'Submit',
       demo:'Demo mode: not connected to the database. Submissions are not saved.',
       excs:[['','None'],['晚到','Late'],['车满/部分拒收','Full / partial refusal'],['货未齐','Freight not ready'],['车辆问题','Vehicle issue'],['其他','Other']],
-      e_wh:'Select a warehouse',e_carrier:'Select a carrier',e_trailer:'Enter the trailer number',e_arrived:'Enter the arrival time',e_orders:'Orders cannot be negative',e_pallets:'Pallets cannot be negative',optional:'optional',e_photo:'Take at least 1 photo',e_reporter:'Enter your name',e_note:'Please describe "Other"',
+      e_wh:'Select a warehouse',e_carrier:'Select a carrier',e_trailer:'Enter the trailer number',e_arrived:'Enter the arrival time',e_orders:'Orders cannot be negative',e_pallets:'Pallets cannot be negative',e_pallets_req:'Enter the number of pallets (0 if none)',optional:'optional',e_photo:'Take at least 1 photo',e_reporter:'Enter your name',e_note:'Please describe "Other"',
       uploading:'Uploading photos…',saving:'Submitting…',okTitle:'Checked in',again:'Check in another truck',dup:'This truck was already submitted (same warehouse, carrier, trailer and time).',
       fail:'Submit failed. Check your connection and retry: ',tabForm:'Check-in',tabHistory:'History',readonly:'Read-only: view this warehouse\'s submitted records. Note: if a record was submitted by mistake, contact the transport & distribution admin to correct it.',fixNote:'Note: if this was submitted by mistake, contact the transport & distribution admin to correct it.',refresh:'Refresh',hToday:'Today',hYesterday:'Yesterday',hAll:'Whole peak (11/20–12/4)',hAllCarrier:'All',hSearch:'Search trailer / name',hTrucks:'trucks',hOrders:'orders',hPallets:'pallets',hNone:'No records',hVoid:'Voided',hPhotos:'photos',hBy:'by',hLoading:'Loading…',hErr:'Query failed: ',hPickWh:'Select a warehouse on the Check-in tab first',todayTitle:'Checked in today at this warehouse',trucks:'trucks',none:'Nothing checked in yet today',unitT:'truck',unitP:'pallet',confirmDup:'This trailer was already checked in today. Tap Submit again to confirm.'},
 };
@@ -217,7 +217,6 @@ function renderWh(){
 function renderCarriers(){
   $('carriers').innerHTML = S.carriers.map(c=>`<div class="opt ${S.carrier===c.code?'on':''}" data-carrier="${esc(c.code)}">${esc(c.code)}<small>${c.unit==='pallet'?t('unitP'):t('unitT')}</small></div>`).join('');
   const unit=(S.carriers.find(c=>c.code===S.carrier)||{}).unit;
-  $('palletReq').style.display = unit==='pallet' ? '' : 'none';
 }
 function renderExc(){
   $('exc').innerHTML = t('excs').map(([v,l])=>`<span class="chip ${v===''?'none':''} ${S.exc===v?'on':''}" data-exc="${esc(v)}">${esc(l)}</span>`).join('');
@@ -261,7 +260,8 @@ function validate(){
   if(!w) return 'e_wh'; if(!S.carrier) return 'e_carrier';
   if(!$('trailer').value.trim()) return 'e_trailer'; if(!$('arrived').value) return 'e_arrived';
   if($('orders').value!=='' && +$('orders').value<0) return 'e_orders';
-  if($('pallets').value!=='' && +$('pallets').value<0) return 'e_pallets';
+  if($('pallets').value==='') return 'e_pallets_req';
+  if(+$('pallets').value<0) return 'e_pallets';
   if(!S.photos.length) return 'e_photo'; if(S.exc==='其他' && !$('note').value.trim()) return 'e_note';
   if(!$('reporter').value.trim()) return 'e_reporter';
   return null;
