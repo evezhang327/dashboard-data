@@ -404,6 +404,7 @@ const I18N = (()=>{
   '实时 · 已连接数据库':'Live · connected to database',
   '实际到车 / 预测车数':'Actual / forecast trucks',
   '实际板数 / 预测板数':'Actual / forecast pallets',
+  '容器交接托数 / 预测板数':'Handover containers / forecast pallets',
   '按早上预测的预派车提醒':'Planned-truck reminders from the morning forecast',
   '这天还没有实际做货数据':'No actual volume for this day yet',
   '预派车的服务商都已登记':'All carriers with planned trucks have checked in',
@@ -944,6 +945,8 @@ function renderHero(){
   const acTo = iw ? S.dailyActual.filter(r=>toDate.includes(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse)&&!NO_PEAK_FC.has(r.carrier)).reduce((s,r)=>s+r.need,0)
                   : pkRows(toDate).filter(r=>!NO_PEAK_FC.has(r.carrier)).reduce((s,r)=>s+(r.orders||0),0);           // 每日实际货量累计
   const aTo = agg(fcRows(toDate), pkRows(toDate).filter(r=>!NO_PEAK_FC.has(r.carrier))), aAll = agg(fcAll, []);
+  const hoCont = Object.values(S.ho||{}).filter(r=>toDate.includes(r.date)&&whPass(r.warehouse)&&S.f.carriers.has(r.carrier)).reduce((t,r)=>t+(r.containers||0),0);   // 容器交接托数
+  const hoFc = (S.dl||[]).filter(r=>isHo(r.warehouse,r.carrier)&&toDate.includes(r.date)&&whPass(r.warehouse)&&S.f.carriers.has(r.carrier)).reduce((t,r)=>t+(r.gaylord||0)+(r.pallets||0),0);   // 早上预测 Gaylord+托盘
   const pAct = totalFc ? acTo/totalFc*100 : 0, pPlan = totalFc ? fcTo/totalFc*100 : 0;
   const vsPlan = fcTo ? Math.round(acTo/fcTo*100) : null;
   const filledWh = new Set(pkRows(toDate).map(r=>r.warehouse)).size;
@@ -971,7 +974,7 @@ function renderHero(){
     <div class="grid">
       <div><small>${toLbl||'截至今天'} 预测应达</small><b>${notStarted?'—':fmt(fcTo)}</b></div>
       <div><small>实际到车 / 预测车数</small><b>${notStarted?`— / ${fmt(aAll.fcTrucks)}`:`${fmt(aTo.acTrucks)} / ${fmt(aTo.fcTrucks)}`}</b></div>
-      <div><small>实际板数 / 预测板数</small><b>${notStarted?`— / ${fmt(aAll.fcPallets)}`:`${fmt(aTo.acPallets)} / ${fmt(aTo.fcPallets)}`}</b></div>
+      <div title="LAX4 / NJ1 Amazon、NJ5 FedEx Ground：iWMS 容器交接的发货容器数 ÷ 早上预测的 Gaylord + 托盘"><small>容器交接托数 / 预测板数</small><b>${notStarted?'— / —':`${fmt(hoCont)} / ${hoFc?fmt(hoFc):'—'}`}</b></div>
       <div><small>已填报仓库</small><b>${notStarted?'—':filledWh+' / '+scopeWh}</b></div>
       <div><small>异常车次</small><b>${notStarted?'—':fmt(aTo.exceptions)}</b></div>
     </div>`;
