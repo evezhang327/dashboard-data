@@ -899,9 +899,9 @@ async function openPhoto(path){
   if(!LIVE) return;
   $('modalBox').innerHTML='<div class="empty">加载中…</div>'; $('modal').classList.add('on');
   const { data, error } = await sb.storage.from('pickup-photos').createSignedUrl(path, 3600);
-  const arch = error && /not.?found|404|object/i.test(error.message||'');   // 超过 7 天的照片已由 Mac 归档到 Google Drive
-  const archUrl = CFG.PHOTO_ARCHIVE_URL || '';
-  if(arch){ $('modalBox').innerHTML = `<div class="empty" style="line-height:1.8">这张照片已归档到 Google Drive<br><span class="hint">位置：照片归档 / ${esc(path)}</span>${archUrl?`<br><a class="btn sm" href="${esc(archUrl)}" target="_blank" rel="noopener" style="margin-top:8px;display:inline-block">在 Google Drive 中查看</a>`:''}</div><div style="text-align:right;margin-top:8px"><button class="btn sm" onclick="document.getElementById('modal').classList.remove('on')">关闭</button></div>`; return; }
+  const arch = error && /not.?found|404|object/i.test(error.message||'');   // 超过 7 天的照片已由 Mac 每周归档到 JoySpace「提货pod」
+  const archUrl = CFG.PHOTO_ARCHIVE_URL || 'https://joyspace.jd.com/documents/dF2EKvSmGHjL9LKGlsZg';
+  if(arch){ $('modalBox').innerHTML = `<div class="empty" style="line-height:1.8">这张照片已归档到 JoySpace「提货pod」<br><span class="hint">在对应仓库文件夹里，按 日期_服务商_车厢号 查找</span>${archUrl?`<br><a class="btn sm" href="${esc(archUrl)}" target="_blank" rel="noopener" style="margin-top:8px;display:inline-block">打开 JoySpace 提货pod</a>`:''}</div><div style="text-align:right;margin-top:8px"><button class="btn sm" onclick="document.getElementById('modal').classList.remove('on')">关闭</button></div>`; return; }
   $('modalBox').innerHTML = error ? `<div class="empty">照片加载失败：${esc(error.message)}</div>` : `<img src="${data.signedUrl}" alt="到车照片"><div style="display:flex;justify-content:space-between;margin-top:8px"><span class="hint">${esc(path)}</span><button class="btn sm" onclick="document.getElementById('modal').classList.remove('on')">关闭</button></div>`;
 }
 let voidTarget=null;
