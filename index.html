@@ -382,6 +382,7 @@ const I18N = (()=>{
   '仅显示最近 500 条，共':'Showing the latest 500 of ',
   '天有实际 · 平均绝对误差':' days with actuals · mean absolute error',
   '天平均绝对误差':'-day mean absolute error',
+  '实际口径：iWMS 实际做货（各仓当地 15:00 / 19:00 及刷新时更新）':'Actual basis: iWMS actual volume (updated at 15:00 / 19:00 local and on refresh)',
   '实际口径：仓库填报交接单量':'Actual basis: orders reported by warehouses',
   '实际：仓库填报交接单量':'Actual: orders reported by warehouses',
   '每日到车：预测 vs 实际':'Daily trucks: forecast vs actual',
@@ -756,7 +757,7 @@ const S = {
   warehouses: FORECAST_DATA.warehouses, carriers: FORECAST_DATA.carriers,
   forecast: FORECAST_DATA.forecast, pickups: [],
   f: { date:'', carriers:new Set(CARRIER_ORDER), wh:'ALL', region:'ALL', q:'' },
-  demoActuals:false, lastLoad:null, photoCache:{}, daily:[], dailyActual:[], actSrc:'pickup',
+  demoActuals:false, lastLoad:null, photoCache:{}, daily:[], dailyActual:[], actSrc:'iwms',
 };
 const $ = id => document.getElementById(id);
 const fmt = n => n==null||isNaN(n) ? '—' : Math.round(n).toLocaleString('en-US');
@@ -928,7 +929,7 @@ function renderHero(){
     <div class="prog">
       <div class="prog-head">
         <span><i class="sw-act"></i>累计实际货量 <b>${notStarted?'—':fmt(acTo)}</b> 单 · 占预测总量 <b>${notStarted?'—':pAct.toFixed(1)+'%'}</b></span>
-        <span class="prog-src">${!notStarted&&!S.f.date?'<i class="sw-plan"></i>虚线 = 截至今天预测应达 · ':''}${iw?'实际口径：实际需做':'实际口径：仓库填报交接单量'}</span>
+        <span class="prog-src">${!notStarted&&!S.f.date?'<i class="sw-plan"></i>虚线 = 截至今天预测应达 · ':''}${iw?'实际口径：iWMS 实际做货（各仓当地 15:00 / 19:00 及刷新时更新）':'实际口径：仓库填报交接单量'}</span>
       </div>
       <div class="prog-bar" title="红色 = 每日实际累计；虚线 = 截至今天的预测应达">
         <i class="act" style="width:${Math.min(100,S._lastPct??0)}%"></i>
@@ -1256,7 +1257,7 @@ function renderModeChrome(){
     : '仅含按车预测的服务商（USPS / UPS / FedEx / DHL）；按板服务商见下方矩阵。';
   $('mHint').textContent = daily ? '格内为当天 登记实际到车 / 预派车 车数，下行为早上预测单量与 Gaylord / 托盘；仓库每提交一辆车立即计入。可在上方日期里切到近 14 天的其他日期。'
     : '只看当天、实时更新：格内为当天 实际 / 预测 车数（按板服务商为板数），下行为单量；仓库每提交一辆车立即计入。可在上方日期筛选里切到其他日期。';
-  $('actSrc').style.display = daily ? 'none' : '';
+  $('actSrc').style.display = 'none';
 }
 function render(){
   renderModeChrome();
