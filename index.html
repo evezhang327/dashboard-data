@@ -7,7 +7,7 @@
 <script src="config.js" onerror="void 0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-:root{
+:root{--pre:#F4A7A2;
   --bg:#f6f7f9; --card:#ffffff; --line:#e7e8ec; --line2:#f0f1f4;
   --ink:#0f172a; --ink2:#475569; --ink3:#94a3b8;
   --blue:#E1251B; --blue-soft:#fdeceb; --orange:#334155; --red:#E1251B; --red-dark:#B8141B; --fc:#d5d9e0;
@@ -269,14 +269,14 @@ body.daily .chip.on{background:#e8effd;border-color:#b6ccf8;color:#1D4ED8}
     <div class="card panel">
       <div class="ph">
         <h2 id="c1Title">每日单量：黑五预测 / 日均预测 / 实际货量</h2>
-        <div class="legend" id="c1Legend"><span><i style="background:var(--fc)"></i>黑五预测</span><span><i style="background:var(--orange);border-radius:50%"></i>日均预测</span><span><i style="background:var(--blue)"></i>实际货量</span></div>
+        <div class="legend" id="c1Legend"><span><i style="background:var(--fc)"></i>黑五预测</span><span><i style="background:var(--orange);border-radius:50%"></i>日均预测</span><span><i style="background:var(--blue)"></i>实际货量</span><span><i style="background:var(--pre)"></i>前一晚提前完成</span></div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:-4px 0 6px">
         <div class="chips" id="actSrc"></div>
         <span class="hint" id="ordersSum"></span>
       </div>
       <div class="chart" id="chartOrders"></div>
-      <div class="hint" id="c1Hint" style="margin-top:6px">黑五预测：大促预测表；日均预测：每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量可切换口径。点柱子可切到当天。</div>
+      <div class="hint" id="c1Hint" style="margin-top:6px">黑五预测：大促预测表；日均预测：每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量 = 当地 3pm 截单的全部单量，浅色是前一晚已提前做完的部分（每晚抓取更新，会先出现在第二天的柱子上）。点柱子可切到当天。</div>
     </div>
     <div class="card panel">
       <div class="ph">
@@ -333,7 +333,7 @@ const I18N = (()=>{
   '按美西时间判断。按车服务商：USPS / UPS / FedEx / DHL；按板服务商：GOFO / UNIUNI / Speedx。USPS 的 dropoff 为我方送网点。':'Dates follow US Pacific time. Truck-based carriers: USPS / UPS / FedEx / DHL; pallet-based: GOFO / UNIUNI / Speedx. USPS "dropoff" = we deliver to the facility.',
   '格内为当天 登记实际到车 / 预派车 车数，下行为早上预测单量与 Gaylord / 托盘；仓库每提交一辆车立即计入。可在上方日期里切到近 14 天的其他日期。':'Each cell: trucks checked in / trucks planned for the day; second line: morning forecast orders and Gaylords / pallets. Every truck a warehouse submits counts immediately. Use the date filter above to view the last 14 days.',
   '只看当天、实时更新：格内为当天 实际 / 预测 车数（按板服务商为板数），下行为单量；仓库每提交一辆车立即计入。可在上方日期筛选里切到其他日期。':'Today only, live: each cell shows actual / forecast trucks (pallets for pallet-based carriers); second line is orders. Every truck a warehouse submits counts immediately. Use the date filter above to view other days.',
-  '黑五预测：大促预测表；日均预测：每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量可切换口径。点柱子可切到当天。':'Peak forecast: the Black Friday forecast sheet. Daily forecast: the full-day estimate made each morning (JD last-mile, same carriers as the peak forecast). The actual-volume basis can be switched. Click a bar to jump to that day.',
+  '黑五预测：大促预测表；日均预测：每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量 = 当地 3pm 截单的全部单量，浅色是前一晚已提前做完的部分（每晚抓取更新，会先出现在第二天的柱子上）。点柱子可切到当天。':'Peak forecast: the Black Friday forecast sheet. Daily forecast: the full-day estimate made each morning (JD last-mile, same carriers as the peak forecast). Actual = all orders with a 3pm local cutoff that day; the lighter part was packed the night before (updated nightly, shown first on the next-day bar). Click a bar to jump to that day.',
   '预派车：早上预测按单量 × 各仓包裹画像算出 Gaylord / 托盘，再按每车托位换算；实际到车：仓库登记页提交的车次。':'Planned trucks: morning forecast orders × each warehouse\'s parcel profile → Gaylords / pallets → trucks by positions per truck. Actual trucks: trucks submitted on the check-in page.',
   '日常模式 · 早上当日预测 vs 实际做货 · 13 个自营仓 · 大促 11/20–12/4 期间自动切换为大促模式':'Daily mode · Morning forecast vs actual · 13 JD warehouses · switches to Peak mode automatically 11/20–12/4',
   '仅含按车预测的服务商（USPS / UPS / FedEx / DHL）；按板服务商见下方矩阵。':'Truck-based carriers only (USPS / UPS / FedEx / DHL); pallet-based carriers are in the matrix below.',
@@ -386,7 +386,7 @@ const I18N = (()=>{
   '仅显示最近 500 条，共':'Showing the latest 500 of ',
   '天有实际 · 平均绝对误差':' days with actuals · mean absolute error',
   '天平均绝对误差':'-day mean absolute error',
-  '实际口径：iWMS 实际做货（各仓当地 15:00 / 19:00 及刷新时更新）':'Actual basis: iWMS actual volume (updated at 15:00 / 19:00 local and on refresh)',
+  '实际口径：iWMS 当地 3pm 截单货量（各仓当地 15:00 / 19:00 及刷新时更新）':'Actual basis: iWMS orders cut off at 3pm local (updated at 15:00 / 19:00 local and on refresh)',
   '实际口径：仓库填报交接单量':'Actual basis: orders reported by warehouses',
   '实际：仓库填报交接单量':'Actual: orders reported by warehouses',
   '每日到车：预测 vs 实际':'Daily trucks: forecast vs actual',
@@ -486,6 +486,8 @@ const I18N = (()=>{
   '实际到车':'Actual trucks',
   '实际单量':'Actual orders',
   '实际货量':'Actual volume',
+  '前一晚提前完成':'Packed the night before', '前一晚已提前完成 ':'Packed the night before: ', '其中前一晚提前完成：':'Of which packed the night before: ',
+  '截单前货量 ':'cutoff volume ', '（其中前一晚提前完成 ':' (packed the night before: ', ' 的货已提前完成 ':' orders already packed early: ', ' · 每晚抓取更新':' · updated nightly',
   '实际需做':'Actual to-do',
   '尚未开始':'Not started',
   '异常汇总':'Exceptions',
@@ -850,7 +852,7 @@ async function loadDaily(){
   S.daily = S.dl.map(l=>({date:l.date, warehouse:l.warehouse, carrier:l.carrier, est:l.est}));
   const a = await sb.from('daily_actual').select('warehouse,date,cat,carrier,due,pre_done').eq('cat','京东尾程').gte('date',rf).lte('date',rt).limit(20000);
   if(a.error) throw a.error;
-  S.dailyActual = a.data.filter(l=>DAILY_PEAK[l.carrier]).map(l=>({date:l.date, warehouse:l.warehouse, carrier:DAILY_PEAK[l.carrier], need:l.due-l.pre_done}));
+  S.dailyActual = a.data.filter(l=>DAILY_PEAK[l.carrier]).map(l=>({date:l.date, warehouse:l.warehouse, carrier:DAILY_PEAK[l.carrier], need:l.due-l.pre_done, pre:l.pre_done||0}));
 }
 function makeDemoDaily(){
   let seed=29; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
@@ -942,13 +944,19 @@ function renderHero(){
   const totalFc = fcAll.reduce((s,r)=>s+(r.fc_orders||0),0);                    // 黑五大预测（JoySpace）总量
   const fcTo = fcRows(toDate).reduce((s,r)=>s+(r.fc_orders||0),0);              // 截至今天应达（预测）
   const iw = S.actSrc==='iwms';
-  const acTo = iw ? S.dailyActual.filter(r=>toDate.includes(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse)&&!NO_PEAK_FC.has(r.carrier)).reduce((s,r)=>s+r.need,0)
+  const acTo = iw ? S.dailyActual.filter(r=>toDate.includes(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse)&&!NO_PEAK_FC.has(r.carrier)).reduce((s,r)=>s+r.need+r.pre,0)
                   : pkRows(toDate).filter(r=>!NO_PEAK_FC.has(r.carrier)).reduce((s,r)=>s+(r.orders||0),0);           // 每日实际货量累计
   const aTo = agg(fcRows(toDate), pkRows(toDate).filter(r=>!NO_PEAK_FC.has(r.carrier))), aAll = agg(fcAll, []);
   const hoCont = Object.values(S.ho||{}).filter(r=>toDate.includes(r.date)&&whPass(r.warehouse)&&S.f.carriers.has(r.carrier)).reduce((t,r)=>t+(r.containers||0),0);   // 容器交接托数
   const hoFc = (S.dl||[]).filter(r=>isHo(r.warehouse,r.carrier)&&toDate.includes(r.date)&&whPass(r.warehouse)&&S.f.carriers.has(r.carrier)).reduce((t,r)=>t+(r.gaylord||0)+(r.pallets||0),0);   // 早上预测 Gaylord+托盘
   const pAct = totalFc ? acTo/totalFc*100 : 0, pPlan = totalFc ? fcTo/totalFc*100 : 0;
   const vsPlan = fcTo ? Math.round(acTo/fcTo*100) : null;
+  const today0 = refToday(), dA = S.dailyActual.filter(r=>S.f.carriers.has(r.carrier)&&whPass(r.warehouse)&&!NO_PEAK_FC.has(r.carrier));
+  const cutDay = S.f.date || today0;
+  const cutVol = dA.filter(r=>r.date===cutDay).reduce((t,r)=>t+r.need+r.pre,0), cutPre = dA.filter(r=>r.date===cutDay).reduce((t,r)=>t+r.pre,0);
+  const nextD = dA.map(r=>r.date).filter(d=>d>cutDay).sort()[0];
+  const nextPre = nextD ? dA.filter(r=>r.date===nextD).reduce((t,r)=>t+r.pre,0) : 0;
+  const cutLine = iw && (cutVol||nextPre) ? `<div class="prog-foot cut-line">${md(cutDay)} 截单前货量 <b>${fmt(cutVol)}</b> 单（其中前一晚提前完成 <b>${fmt(cutPre)}</b>）${nextD?` · ${md(nextD)} 的货已提前完成 <b>${fmt(nextPre)}</b> 单`:''} · 每晚抓取更新</div>` : '';
   const filledWh = new Set(pkRows(toDate).map(r=>r.warehouse)).size;
   const scopeWh = new Set(fcRows(toDate).filter(r=>r.fc_units>0).map(r=>r.warehouse)).size;
   const notStarted = !S.f.date && toDate.length===0;
@@ -961,7 +969,7 @@ function renderHero(){
     <div class="prog">
       <div class="prog-head">
         <span><i class="sw-act"></i>累计实际货量 <b>${notStarted?'—':fmt(acTo)}</b> 单 · 占预测总量 <b>${notStarted?'—':pAct.toFixed(1)+'%'}</b></span>
-        <span class="prog-src">${!notStarted&&!S.f.date?'<i class="sw-plan"></i>虚线 = 截至今天预测应达 · ':''}${iw?'实际口径：iWMS 实际做货（各仓当地 15:00 / 19:00 及刷新时更新）':'实际口径：仓库填报交接单量'}</span>
+        <span class="prog-src">${!notStarted&&!S.f.date?'<i class="sw-plan"></i>虚线 = 截至今天预测应达 · ':''}${iw?'实际口径：iWMS 当地 3pm 截单货量（各仓当地 15:00 / 19:00 及刷新时更新）':'实际口径：仓库填报交接单量'}</span>
       </div>
       <div class="prog-bar" title="红色 = 每日实际累计；虚线 = 截至今天的预测应达">
         <i class="act" style="width:${Math.min(100,S._lastPct??0)}%"></i>
@@ -969,7 +977,7 @@ function renderHero(){
         ${!notStarted&&!S.f.date?`<i class="plan" style="left:${Math.min(99.6,pPlan)}%"></i>`:''}
       </div>
       <div class="prog-foot">${notStarted?'大促尚未开始 · 11/20 起每天的实际货量会自动累计到这条进度条上':
-        `${toLbl} 预测应达 ${fmt(fcTo)} 单 · 实际 ${fmt(acTo)} 单 · <b>完成应达的 ${vsPlan==null?'—':vsPlan+'%'}</b>`}</div>
+        `${toLbl} 预测应达 ${fmt(fcTo)} 单 · 实际 ${fmt(acTo)} 单 · <b>完成应达的 ${vsPlan==null?'—':vsPlan+'%'}</b>`}</div>${cutLine}
     </div>
     <div class="grid">
       <div><small>${toLbl||'截至今天'} 预测应达</small><b>${notStarted?'—':fmt(fcTo)}</b></div>
@@ -1015,7 +1023,8 @@ function barChart(el, series, opts){
     const r=Math.min(4,bw/2);
     const hf=ih-(y(s.fc)-P.t);
     if(s.fc>0) g+=`<path d="${rbar(cx-bw/2,y(s.fc),bw,P.t+ih-y(s.fc),r)}" fill="${fut?'#e9ecf1':'var(--fc)'}"/>`;
-    if(s.ac>0){ const w2=bw*0.56; g+=`<path d="${rbar(cx-w2/2,y(s.ac),w2,P.t+ih-y(s.ac),Math.min(4,w2/2))}" fill="var(--blue)" stroke="#fff" stroke-width="2" paint-order="stroke"/>`; }
+    if(s.ac>0){ const w2=bw*0.56; g+=`<path d="${rbar(cx-w2/2,y(s.ac),w2,P.t+ih-y(s.ac),Math.min(4,w2/2))}" fill="${s.pre>=s.ac?'var(--pre)':'var(--blue)'}" stroke="#fff" stroke-width="2" paint-order="stroke"/>`;
+      if(s.pre>0&&s.pre<s.ac){ const hp=P.t+ih-y(s.pre); g+=`<rect x="${cx-w2/2}" y="${y(s.pre)}" width="${w2}" height="${hp}" fill="var(--pre)"/>`; } }
     const every = step>=38?1:step>=20?2:3;
     const ti=series.findIndex(x=>x.date===today), far=ti<0||Math.abs(i-ti)>=every;
     if((i%every===0&&far) || sel || s.date===today) g+=`<text x="${cx}" y="${H-P.b+16}" text-anchor="middle" font-size="11" fill="${sel?'#0f172a':'#64748b'}" font-weight="${sel||s.date===today?700:400}">${md(s.date)}</text>`;
@@ -1035,7 +1044,7 @@ function barChart(el, series, opts){
       tip.innerHTML = opts.daily
         ? `<b>${md(s.date)} 周${wd(s.date)}</b><br>早上预测：${s.fc?fmt(s.fc)+' '+opts.unit:'—'}<br>${opts.acLabel||'实际'}：${s.ac!=null&&s.ac>0?fmt(s.ac)+' '+opts.unit:'—'}${s.fc>0&&s.ac>0?`<br>${opts.unit==='单'?'预测误差：'+((s.fc-s.ac)/s.ac*100>=0?'+':'')+((s.fc-s.ac)/s.ac*100).toFixed(1)+'%':'达成：'+pct(s.ac,s.fc)+'%'}`:''}`
         : opts.line
-        ? `<b>${md(s.date)} 周${wd(s.date)}</b><br>黑五预测：${fmt(s.fc)} 单<br>日均预测：${s.dl!=null?fmt(s.dl)+' 单'+(s.fc?`（${s.dl>=s.fc?'+':''}${((s.dl/s.fc-1)*100).toFixed(1)}%）`:''):'—'}<br>实际货量：${s.date>today?'未开始':(s.ac?fmt(s.ac)+' 单':'—')}${s.ac&&s.fc?`<br>实际 / 黑五预测：${pct(s.ac,s.fc)}%`:''}${s.ac&&s.dl?`<br>实际 / 日均预测：${pct(s.ac,s.dl)}%`:''}`
+        ? `<b>${md(s.date)} 周${wd(s.date)}</b><br>黑五预测：${fmt(s.fc)} 单<br>日均预测：${s.dl!=null?fmt(s.dl)+' 单'+(s.fc?`（${s.dl>=s.fc?'+':''}${((s.dl/s.fc-1)*100).toFixed(1)}%）`:''):'—'}<br>实际货量：${s.date>today?(s.pre?'前一晚已提前完成 '+fmt(s.pre)+' 单':'未开始'):(s.ac?fmt(s.ac)+' 单':'—')}${s.date<=today&&s.pre?`<br>其中前一晚提前完成：${fmt(s.pre)} 单`:''}${s.ac&&s.fc&&s.date<=today?`<br>实际 / 黑五预测：${pct(s.ac,s.fc)}%`:''}${s.ac&&s.dl&&s.date<=today?`<br>实际 / 日均预测：${pct(s.ac,s.dl)}%`:''}`
         : `<b>${md(s.date)} 周${wd(s.date)}</b><br>预测：${fmt(s.fc)} ${opts.unit}<br>实际：${s.date>today?'未开始':fmt(s.ac)+' '+opts.unit}${s.fc>0&&s.date<=today?`<br>达成：${pct(s.ac,s.fc)}%`:''}`;
       tip.style.left=(e.clientX-rc.left)+'px'; tip.style.top=(e.clientY-rc.top-10)+'px'; tip.style.opacity=1;});
     h.addEventListener('mouseleave',()=>tip.style.opacity=0);
@@ -1053,7 +1062,8 @@ function renderCharts(){
   const so=DATES.map(d=>{ const dl=dlAll.filter(r=>r.date===d); return {date:d,
     fc:fcAll.filter(r=>r.date===d).reduce((s,r)=>s+(r.fc_orders||0),0),
     dl: dl.length? dl.reduce((s,r)=>s+r.est,0) : null,
-    ac: S.actSrc==='iwms' ? daAll.filter(r=>r.date===d).reduce((s,r)=>s+r.need,0) : pkAll.filter(r=>r.date===d).reduce((s,r)=>s+(r.orders||0),0)}; });
+    pre: S.actSrc==='iwms' ? daAll.filter(r=>r.date===d).reduce((s,r)=>s+r.pre,0) : 0,
+    ac: S.actSrc==='iwms' ? daAll.filter(r=>r.date===d).reduce((s,r)=>s+r.need+r.pre,0) : pkAll.filter(r=>r.date===d).reduce((s,r)=>s+(r.orders||0),0)}; });
   $('actSrc').innerHTML = [['pickup','实际：仓库填报交接单量'],['iwms','实际：实际需做']].map(([k,v])=>`<span class="chip ${S.actSrc===k?'on':''}" data-src="${k}">${v}</span>`).join('');
   const ed=elapsedDates(), sumTo=f=>so.filter(x=>ed.includes(x.date)).reduce((t,x)=>t+(x[f]||0),0);
   const dlDays=so.filter(x=>ed.includes(x.date)&&x.dl!=null).length;
@@ -1284,9 +1294,9 @@ function renderModeChrome(){
     : '2026 Black Friday · 11/20 – 12/4 · 13 个自营仓 · 8 家服务商 · 预测 vs 实际到车';
   $('c1Title').textContent = daily ? '近 14 天单量：早上预测 vs 实际做货' : '每日单量：黑五预测 / 日均预测 / 实际货量';
   $('c1Legend').innerHTML = daily ? '<span><i style="background:var(--fc)"></i>早上预测</span><span><i style="background:var(--blue)"></i>实际需做</span>'
-    : '<span><i style="background:var(--fc)"></i>黑五预测</span><span><i style="background:var(--orange);border-radius:50%"></i>日均预测</span><span><i style="background:var(--blue)"></i>实际货量</span>';
+    : '<span><i style="background:var(--fc)"></i>黑五预测</span><span><i style="background:var(--orange);border-radius:50%"></i>日均预测</span><span><i style="background:var(--blue)"></i>实际货量</span><span><i style="background:var(--pre)"></i>前一晚提前完成</span>';
   $('c1Hint').textContent = daily ? '早上预测：各仓当地 09:00 早上运行的全天预估 = 已到单 ÷ 历史同时点到单比例；实际需做：截单当天应做 − 提前做完（各仓当地 15:00 / 19:00 及刷新时更新，次日早上定稿）。京东尾程。点柱子切到当天。'
-    : '黑五预测：大促预测表；日均预测：每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量可切换口径。点柱子可切到当天。';
+    : '黑五预测：大促预测表；日均预测：每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量 = 当地 3pm 截单的全部单量，浅色是前一晚已提前做完的部分（每晚抓取更新，会先出现在第二天的柱子上）。点柱子可切到当天。';
   $('c2Title').textContent = daily ? '近 14 天到车：预派车 vs 登记实际到车' : '每日到车：预测 vs 实际';
   $('c2Legend').innerHTML = daily ? '<span><i style="background:var(--fc)"></i>预派车</span><span><i style="background:var(--blue)"></i>登记实际到车</span>'
     : '<span><i style="background:var(--fc)"></i>预测车数</span><span><i style="background:var(--blue)"></i>实际到车</span>';
