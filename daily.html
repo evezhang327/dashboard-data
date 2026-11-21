@@ -391,7 +391,7 @@ const I18N = (()=>{
   '个仓':' warehouses',
   '分钟':' min',
 
-  '口径与 LAX2 每日推送一致（复用 lax2_daily_push.py 的函数）：按系统截单时间=当天统计；剔除 2B 与取消/拉回/拦截/转病单；今天之前已打包的单不计入；全天预估 = 已到单 ÷ 历史同时点到单比例（各仓当地时间，15:00 后不放大）。实际需做 = 截单当天应做 − 截单日前已提前做完；按时完成 = 截单当天及之前打包。傍晚复核为当天临时值，次日早上运行覆盖为最终值。EWR-SM-4-US 不做日均预测。':'Same logic as the LAX2 daily push (reuses lax2_daily_push.py): counts orders whose system cutoff is today; excludes 2B and cancelled / pulled back / intercepted / problem orders; orders packed before today are not counted; full-day estimate = orders received ÷ historical share received by that time (warehouse local time, not scaled after 15:00). Actual to-do = due today − already packed before the cutoff day; on time = packed on or before the cutoff day. The evening value is provisional and is overwritten by the next morning\'s run. EWR-SM-4-US has no daily forecast.',
+  '口径与 LAX2 每日推送一致（复用 lax2_daily_push.py 的函数）：按系统截单时间=当天统计；剔除 2B 与取消/拉回/拦截/转病单；今天之前已打包的单不计入；全天预估 = 已到单 ÷ 历史同时点到单比例（各仓当地时间，15:00 后不放大）。实际需做 = 截单当天应做 − 截单日前已提前做完；按时完成 = 截单当天及之前打包；完成率 = 截单全部订单（含提前做完）里已打包的 ÷ 截单全部订单。傍晚复核为当天临时值，次日早上运行覆盖为最终值。EWR-SM-4-US 不做日均预测。':'Same logic as the LAX2 daily push (reuses lax2_daily_push.py): counts orders whose system cutoff is today; excludes 2B and cancelled / pulled back / intercepted / problem orders; orders packed before today are not counted; full-day estimate = orders received ÷ historical share received by that time (warehouse local time, not scaled after 15:00). Actual to-do = due today − already packed before the cutoff day; on time = packed on or before the cutoff day; completion = packed ÷ all orders due that day (incl. packed early). The evening value is provisional and is overwritten by the next morning\'s run. EWR-SM-4-US has no daily forecast.',
   '大促预测只覆盖 11/20–12/4；实际到车来自仓库填报小程序。偏差 = 今早预估 ÷ 大促预测 − 1。':'The peak forecast only covers 11/20–12/4; actual trucks come from the warehouse check-in page. Variance = this morning\'s estimate ÷ peak forecast − 1.',
   '权限开通后在采集脚本 sites.yaml 里把 enabled 改为 true 即可接入。':'Once access is granted, set enabled to true in the collector\'s sites.yaml to add it.',
   '每日取单 · 各仓当地 15:00 截单 · 早上预测 vs 实际做货 vs 实际到车':'Daily pickups · 15:00 local cutoff · morning forecast vs actual volume vs actual trucks',
@@ -705,13 +705,13 @@ function carrierTable(cat,icon,L,mMap,aMap,need,jd){
   if(!rows.length) return '';
   const T={a:0,e:0,me:0,g:0,p:0,v:0,ft3:0,need:0,done:0,late:0,has:false};
   const tr=rows.map(l=>{ const k=cat+'|'+l.carrier, a=aMap[k], m=mMap[k]; const n=need(a);
-    T.a+=l.arrived;T.e+=l.est;T.me+=(m?m.est:l.est);T.g+=l.gaylord||0;T.p+=l.pallets||0;T.v+=l.trucks||0;T.ft3+=+l.ft3||0; if(a){T.has=true;T.need+=n;T.done+=a.done-a.pre_done;T.late+=a.late;}
+    T.a+=l.arrived;T.e+=l.est;T.me+=(m?m.est:l.est);T.g+=l.gaylord||0;T.p+=l.pallets||0;T.v+=l.trucks||0;T.ft3+=+l.ft3||0; if(a){T.has=true;T.need+=n;T.done+=a.done-a.pre_done;T.late+=a.late;T.cd=(T.cd||0)+a.done;T.cdue=(T.cdue||0)+a.due;}
     return `<tr><td><b>${esc(l.carrier)}</b></td><td class="num"><b>${fmt(l.est)}</b></td><td class="num">${fmt(l.arrived)}</td>${jd?`<td class="num">${l.ratio!=null?Math.round(l.ratio*100)+'%':'—'}</td><td class="num">${fmt(l.ft3)}</td>`:''}<td class="num">G${fmt(l.gaylord)}${l.pallets?` / 托${fmt(l.pallets)}`:''}</td>${jd?`<td class="num">${l.trucks?`${esc(l.truck_label)}×${l.trucks}`:'—'}</td>`:''}
-      <td class="num bl">${a?fmt(n):'—'}</td><td class="num">${a?fmt(a.done-a.pre_done):'—'}</td><td class="num">${a?(a.late?`<span style="color:var(--bad)">${fmt(a.late)}</span>`:'0'):'—'}</td><td class="num">${a?rateTag(a.done-a.pre_done,n):'—'}</td><td class="num">${a?errTag(m?m.est:l.est,n):'—'}</td></tr>`; }).join('');
+      <td class="num bl">${a?fmt(n):'—'}</td><td class="num">${a?fmt(a.done-a.pre_done):'—'}</td><td class="num">${a?(a.late?`<span style="color:var(--bad)">${fmt(a.late)}</span>`:'0'):'—'}</td><td class="num">${a?rateTag(a.done,a.due):'—'}</td><td class="num">${a?errTag(m?m.est:l.est,n):'—'}</td></tr>`; }).join('');
   return `<section class="card panel"><div class="ph"><h2>${icon} ${cat}：预估 ${fmt(T.e)} 单（已到 ${fmt(T.a)}）</h2><span class="hint">${jd?'预派车 = max(保底车数, 托位 ÷ 每车托位)':'客户自约车辆由承运商安排，不给派车建议'}</span></div>
    <div class="tbl-wrap"><table><thead><tr><th colspan="${jd?7:4}">早上 / 本次预测</th><th class="grp" colspan="5">实际做货（iWMS）</th></tr>
    <tr><th>服务商</th><th class="num">预估单量</th><th class="num">已到</th>${jd?'<th class="num">到单比例</th><th class="num">方数 ft³</th>':''}<th class="num">Gaylord / 托盘</th>${jd?'<th class="num">预派车</th>':''}<th class="num bl">实际需做</th><th class="num">按时完成</th><th class="num">未按时</th><th class="num">完成率</th><th class="num">早上预测误差</th></tr></thead>
-   <tbody>${tr}<tr class="total"><td>合计</td><td class="num">${fmt(T.e)}</td><td class="num">${fmt(T.a)}</td>${jd?`<td></td><td class="num">${fmt(T.ft3)}</td>`:''}<td class="num">G${fmt(T.g)}${T.p?` / 托${fmt(T.p)}`:''}</td>${jd?`<td class="num">${fmt(T.v)}</td>`:''}<td class="num bl">${T.has?fmt(T.need):'—'}</td><td class="num">${T.has?fmt(T.done):'—'}</td><td class="num">${T.has?fmt(T.late):'—'}</td><td class="num">${T.has?rateTag(T.done,T.need):'—'}</td><td class="num">${T.has?errTag(T.me,T.need):'—'}</td></tr></tbody></table></div></section>`;
+   <tbody>${tr}<tr class="total"><td>合计</td><td class="num">${fmt(T.e)}</td><td class="num">${fmt(T.a)}</td>${jd?`<td></td><td class="num">${fmt(T.ft3)}</td>`:''}<td class="num">G${fmt(T.g)}${T.p?` / 托${fmt(T.p)}`:''}</td>${jd?`<td class="num">${fmt(T.v)}</td>`:''}<td class="num bl">${T.has?fmt(T.need):'—'}</td><td class="num">${T.has?fmt(T.done):'—'}</td><td class="num">${T.has?fmt(T.late):'—'}</td><td class="num">${T.has?rateTag(T.cd||0,T.cdue||0):'—'}</td><td class="num">${T.has?errTag(T.me,T.need):'—'}</td></tr></tbody></table></div></section>`;
 }
 
 function peakCompare(w,d,ML){
@@ -756,16 +756,17 @@ async function renderAll(){
     if(!run){ const st=PENDING[w.code]?`<span class="tag">${PENDING[w.code]}</span>`:err?`<span class="tag bad">失败</span> <span class="hint">${esc(String(err.error).slice(0,40))}</span>`:'<span class="tag">未运行</span>';
       return `<tr><td><span class="wh-link" data-wh="${w.code}">${esc(w.code)}</span><div class="hint">${esc(w.wms_code||'')} · ${esc(w.name)}</div></td><td>${st}</td><td colspan="10"></td></tr>`; }
     const need=act.reduce((s,a)=>s+a.due-a.pre_done,0), done=act.reduce((s,a)=>s+a.done-a.pre_done,0);
+    const cdue=act.reduce((s,a)=>s+a.due,0), cd=act.reduce((s,a)=>s+a.done,0);   // 完成率 = 截单全部订单里已打包的 ÷ 截单全部订单
     const m0=runsOf(w.code,d).filter(r=>r.status==='ok'&&r.run_type==='morning')[0];   // 当天第一次早上运行 = 早上预测
     const pre=act.length?act.reduce((s,a)=>s+(a.pre_done||0),0):(run.done_before||0);   // 今天截单的货，前一晚（及更早）已提前做完
     const nD=[...new Set(S.actual.filter(a=>a.warehouse===w.code&&a.date>d).map(a=>a.date))].sort()[0];   // 这个仓的下一个截单日（周末无截单的仓会是周一）
     const np=nD?actualOf(w.code,nD).reduce((s,a)=>s+(a.pre_done||0),0):0;        // 下一截单日的货，今晚已提前做完
     T.pre+=pre; T.np+=np;
-    T.e+=m0?m0.total_est:0;T.a+=run.total_arrived;T.g+=run.gaylord;T.p+=run.pallets;T.v+=run.trucks;T.bl+=run.backlog||0; if(act.length){T.need+=need;T.done+=done;T.me+=mrun?mrun.total_est:run.total_est;T.has++;}
+    T.e+=m0?m0.total_est:0;T.a+=run.total_arrived;T.g+=run.gaylord;T.p+=run.pallets;T.v+=run.trucks;T.bl+=run.backlog||0; if(act.length){T.need+=need;T.done+=done;T.cd=(T.cd||0)+cd;T.cdue=(T.cdue||0)+cdue;T.me+=mrun?mrun.total_est:run.total_est;T.has++;}
     return `<tr><td><span class="wh-link" data-wh="${w.code}">${esc(w.code)}</span><div class="hint">${esc(w.wms_code||'')} · ${esc(w.name)}</div></td><td>${({evening:'傍晚',manual:'',morning:'早上'}[run.run_type] ?? '早上')} ${localTime(run)}${err&&err.run_at>run.run_at?' <span class="tag bad">最近失败</span>':''}</td>
       <td class="num"><b>${m0?fmt(m0.total_est):'—'}</b></td><td class="num">${fmt(run.total_arrived)}</td><td class="num">${fmt(run.gaylord)}</td><td class="num">${fmt(run.pallets)}</td><td class="num">${fmt(run.trucks)}</td><td class="num">${run.backlog?`<span style="color:var(--bad)">${fmt(run.backlog)}</span>`:'0'}</td>
       <td class="num">${fmt(pre)}${np?`<div class="hint">${md(nD)} 的货已做 ${fmt(np)}</div>`:''}</td>
-      <td class="num bl">${act.length?fmt(need):'—'}</td><td class="num">${act.length?rateTag(done,need):'—'}</td><td class="num">${act.length?errTag(mrun?mrun.total_est:run.total_est,need):'—'}</td></tr>`;}).join('');
+      <td class="num bl">${act.length?fmt(need):'—'}</td><td class="num">${act.length?rateTag(cd,cdue):'—'}</td><td class="num">${act.length?errTag(mrun?mrun.total_est:run.total_est,need):'—'}</td></tr>`;}).join('');
   // 全美按服务商
   const byC={}; runs.forEach(({run})=>{ if(!run) return; (S.lines[run.id]||[]).forEach(l=>{ const k=l.cat+'|'+l.carrier; const o=byC[k]=byC[k]||{cat:l.cat,carrier:l.carrier,est:0,arr:0,g:0,p:0,v:0,n:0}; o.est+=l.est;o.arr+=l.arrived;o.g+=l.gaylord||0;o.p+=l.pallets||0;o.v+=l.trucks||0;o.n++; }); });
   const cRows=Object.values(byC).sort((a,b)=>(a.cat>b.cat?1:a.cat<b.cat?-1:0)||b.est-a.est).map(o=>`<tr><td>${o.cat==='京东尾程'?'🚚':'🤝'} <b>${esc(o.carrier)}</b></td><td class="num"><b>${fmt(o.est)}</b></td><td class="num">${fmt(o.arr)}</td><td class="num">G${fmt(o.g)}${o.p?` / 托${fmt(o.p)}`:''}</td><td class="num">${o.cat==='京东尾程'?fmt(o.v):'—'}</td><td class="num">${o.n}</td></tr>`).join('');
@@ -778,7 +779,7 @@ async function renderAll(){
   </section>
   <section class="card panel"><div class="ph"><h2>各仓今日预测</h2><span class="hint">点仓库编码查看服务商明细</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>仓库</th><th>最近运行（当地）</th><th class="num">早上预测</th><th class="num">当前实际单量</th><th class="num">Gaylord</th><th class="num">托盘</th><th class="num">预派车</th><th class="num">积压</th><th class="num" title="今天截单的货里前一晚已提前做完；小字 = 下一截单日的货今晚已做">提前完成</th><th class="num bl">实际需做</th><th class="num">完成率</th><th class="num">早上预测误差</th></tr></thead>
-    <tbody>${rows}<tr class="total"><td>合计</td><td></td><td class="num">${fmt(T.e)}</td><td class="num">${fmt(T.a)}</td><td class="num">${fmt(T.g)}</td><td class="num">${fmt(T.p)}</td><td class="num">${fmt(T.v)}</td><td class="num">${fmt(T.bl)}</td><td class="num">${fmt(T.pre)}${T.np?`<div class="hint">下一截单日已做 ${fmt(T.np)}</div>`:''}</td><td class="num bl">${T.has?fmt(T.need):'—'}</td><td class="num">${T.has?rateTag(T.done,T.need):'—'}</td><td class="num">${T.has?errTag(T.me,T.need):'—'}</td></tr></tbody></table></div></section>
+    <tbody>${rows}<tr class="total"><td>合计</td><td></td><td class="num">${fmt(T.e)}</td><td class="num">${fmt(T.a)}</td><td class="num">${fmt(T.g)}</td><td class="num">${fmt(T.p)}</td><td class="num">${fmt(T.v)}</td><td class="num">${fmt(T.bl)}</td><td class="num">${fmt(T.pre)}${T.np?`<div class="hint">下一截单日已做 ${fmt(T.np)}</div>`:''}</td><td class="num bl">${T.has?fmt(T.need):'—'}</td><td class="num">${T.has?rateTag(T.cd||0,T.cdue||0):'—'}</td><td class="num">${T.has?errTag(T.me,T.need):'—'}</td></tr></tbody></table></div></section>
   <section class="card panel"><div class="ph"><h2>全美按服务商</h2></div>
     <div class="tbl-wrap"><table><thead><tr><th>服务商</th><th class="num">预估单量</th><th class="num">已到</th><th class="num">Gaylord / 托盘</th><th class="num">预派车</th><th class="num">覆盖仓数</th></tr></thead><tbody>${cRows||'<tr><td colspan="6" class="empty">暂无</td></tr>'}</tbody></table></div></section>`;
 }
@@ -786,7 +787,7 @@ async function renderAll(){
 function renderBanner(){
   $('banner').innerHTML = LIVE ? '' : `<div class="banner"><b>演示模式</b>：尚未连接数据库，以下为按 LAX2 推送样例生成的<b>演示数据</b>（非真实）。部署并运行采集脚本后，这里显示各仓每天早上的真实预测。</div>`;
   $('modeDot').className='dot '+(LIVE?'live':'demo'); $('modeText').textContent=LIVE?'实时 · 已连接数据库':'演示数据';
-  $('foot').innerHTML=`口径与 LAX2 每日推送一致（复用 lax2_daily_push.py 的函数）：按系统截单时间=当天统计；剔除 2B 与取消/拉回/拦截/转病单；今天之前已打包的单不计入；全天预估 = 已到单 ÷ 历史同时点到单比例（各仓当地时间，15:00 后不放大）。实际需做 = 截单当天应做 − 截单日前已提前做完；按时完成 = 截单当天及之前打包。傍晚复核为当天临时值，次日早上运行覆盖为最终值。EWR-SM-4-US 不做日均预测。`;
+  $('foot').innerHTML=`口径与 LAX2 每日推送一致（复用 lax2_daily_push.py 的函数）：按系统截单时间=当天统计；剔除 2B 与取消/拉回/拦截/转病单；今天之前已打包的单不计入；全天预估 = 已到单 ÷ 历史同时点到单比例（各仓当地时间，15:00 后不放大）。实际需做 = 截单当天应做 − 截单日前已提前做完；按时完成 = 截单当天及之前打包；完成率 = 截单全部订单（含提前做完）里已打包的 ÷ 截单全部订单。傍晚复核为当天临时值，次日早上运行覆盖为最终值。EWR-SM-4-US 不做日均预测。`;
 }
 async function render(){ renderFilters(); try{ await renderView(); }catch(e){ $('view').innerHTML=`<div class="alert bad">加载失败：${esc(e.message||e)}</div>`; } }
 $('fWh').onchange=e=>{S.f.wh=e.target.value; render();};
