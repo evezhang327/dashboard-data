@@ -1450,6 +1450,8 @@ if(CFG.CHECKIN_URL){ const a=document.getElementById('checkinLink'); if(a){ a.hr
 async function start(){
   if(DATES.includes(refToday())) S.f.date='';
   S.mode=autoMode(); S.dDate=refToday();
+  { const qd=new URLSearchParams(location.search).get('date');   // 复盘链接：?date=2026-11-20 直接打开那一天
+    if(qd && /^\d{4}-\d\d-\d\d$/.test(qd)){ if(DATES.includes(qd)){ S.mode='peak'; S.f.date=qd; } else if(LIVE){ S.mode='daily'; S.dDate=qd; } } }
   if(!LIVE){ $('app').style.display='block'; $('btnAdmin').style.display='none'; renderAll(); return; }
   const { data:{ session } } = await sb.auth.getSession();
   S.admin=false;
