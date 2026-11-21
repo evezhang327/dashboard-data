@@ -296,7 +296,7 @@ body.daily .chip.on{background:#e8effd;border-color:#b6ccf8;color:#1D4ED8}
       </div>
     </div>
     <div class="tbl-wrap"><table class="matrix" id="matrix"></table></div>
-    <div class="hint" id="mHint" style="margin-top:8px">只看当天、实时更新：格内为当天 实际 / 预测 车数（按板服务商为板数），下行为单量；仓库每提交一辆车立即计入。可在上方日期筛选里切到其他日期。</div>
+    <div class="hint" id="mHint" style="margin-top:8px">只看当天、实时更新：格内为当天 实际 / 预测 车数（按板服务商为板数），下行为单量，按车服务商再下一行为托数（填报托数 / 早上预测的 Gaylord + 托盘）；仓库每提交一辆车立即计入。可在上方日期筛选里切到其他日期。</div>
   </section>
 
   <section class="grid2">
@@ -332,7 +332,7 @@ const I18N = (()=>{
   '早上预测：各仓当地 09:00 早上运行的全天预估 = 已到单 ÷ 历史同时点到单比例；实际需做：截单当天应做 − 提前做完（各仓当地 15:00 / 19:00 及刷新时更新，次日早上定稿）。京东尾程。点柱子切到当天。':'Morning forecast: full-day estimate from the 09:00 local run = orders received ÷ historical share received by that time. Actual to-do: orders due today − already packed earlier (updated at 15:00 / 19:00 local and on refresh; finalized next morning). JD last-mile only. Click a bar to jump to that day.',
   '按美西时间判断。按车服务商：USPS / UPS / FedEx / DHL；按板服务商：GOFO / UNIUNI / Speedx。USPS 的 dropoff 为我方送网点。':'Dates follow US Pacific time. Truck-based carriers: USPS / UPS / FedEx / DHL; pallet-based: GOFO / UNIUNI / Speedx. USPS "dropoff" = we deliver to the facility.',
   '格内为当天 登记实际到车 / 预派车 车数，下行为早上预测单量与 Gaylord / 托盘；仓库每提交一辆车立即计入。可在上方日期里切到近 14 天的其他日期。':'Each cell: trucks checked in / trucks planned for the day; second line: morning forecast orders and Gaylords / pallets. Every truck a warehouse submits counts immediately. Use the date filter above to view the last 14 days.',
-  '只看当天、实时更新：格内为当天 实际 / 预测 车数（按板服务商为板数），下行为单量；仓库每提交一辆车立即计入。可在上方日期筛选里切到其他日期。':'Today only, live: each cell shows actual / forecast trucks (pallets for pallet-based carriers); second line is orders. Every truck a warehouse submits counts immediately. Use the date filter above to view other days.',
+  '只看当天、实时更新：格内为当天 实际 / 预测 车数（按板服务商为板数），下行为单量，按车服务商再下一行为托数（填报托数 / 早上预测的 Gaylord + 托盘）；仓库每提交一辆车立即计入。可在上方日期筛选里切到其他日期。':'Today only, live: each cell shows actual / forecast trucks (pallets for pallet-based carriers); second line is orders; for truck-based carriers the next line shows pallets (reported / morning-forecast gaylords + pallets). Every truck a warehouse submits counts immediately. Use the date filter above to view other days.',
   '黑五预测：大促预测表；日均预测：每天早上的全天预估（京东尾程，与黑五预测同口径的服务商）；实际货量 = 当地 3pm 截单的全部单量，浅色是前一晚已提前做完的部分（每晚抓取更新，会先出现在第二天的柱子上）。点柱子可切到当天。':'Peak forecast: the Black Friday forecast sheet. Daily forecast: the full-day estimate made each morning (JD last-mile, same carriers as the peak forecast). Actual = all orders with a 3pm local cutoff that day; the lighter part was packed the night before (updated nightly, shown first on the next-day bar). Click a bar to jump to that day.',
   '预派车：早上预测按单量 × 各仓包裹画像算出 Gaylord / 托盘，再按每车托位换算；实际到车：仓库登记页提交的车次。':'Planned trucks: morning forecast orders × each warehouse\'s parcel profile → Gaylords / pallets → trucks by positions per truck. Actual trucks: trucks submitted on the check-in page.',
   '日常模式 · 早上当日预测 vs 实际做货 · 13 个自营仓 · 大促 11/20–12/4 期间自动切换为大促模式':'Daily mode · Morning forecast vs actual · 13 JD warehouses · switches to Peak mode automatically 11/20–12/4',
@@ -1101,7 +1101,10 @@ function renderMatrix(){
       fo+=fOrd; ao+=aOrd;
       const st=(isHo(w.code,c)&&!au&&!future)?['st-none','待容器交接']:(status(au,fu,future)||['st-none','—']);
       const trucksNote = unitOf(c)==='pallet' && p.length ? ` · ${p.length}车` : '';
-      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div><div class="s">${st[1]}</div></div></td>`;
+      // 按车计的服务商：另起一行显示托数 = 填报托数 / 早上预测的 Gaylord + 托盘
+      const aPal=p.reduce((s,r)=>s+(r.pallets||0),0), fPal=(S.dl||[]).filter(r=>r.warehouse===w.code&&r.carrier===c&&r.date===day).reduce((s,r)=>s+(r.gaylord||0)+(r.pallets||0),0);
+      const palLine = unitOf(c)==='truck' && (aPal||fPal) ? `<div class="o">托 ${future?'—':fmt(aPal)} / ${fPal?fmt(fPal):'—'}</div>` : '';
+      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div>${palLine}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
     h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small></div></td>${cells}<td class="num"><b>${future?'—':fmt(ao)}</b><br><span style="color:var(--ink3)">/ ${fmt(fo)}</span></td></tr>`;
@@ -1303,7 +1306,7 @@ function renderModeChrome(){
   $('c2Hint').textContent = daily ? '预派车：早上预测按单量 × 各仓包裹画像算出 Gaylord / 托盘，再按每车托位换算；实际到车：仓库登记页提交的车次。'
     : '仅含按车预测的服务商（USPS / UPS / FedEx / DHL）；按板服务商见下方矩阵。';
   $('mHint').textContent = daily ? '格内为当天 登记实际到车 / 预派车 车数，下行为早上预测单量与 Gaylord / 托盘；仓库每提交一辆车立即计入。可在上方日期里切到近 14 天的其他日期。'
-    : '只看当天、实时更新：格内为当天 实际 / 预测 车数（按板服务商为板数），下行为单量；仓库每提交一辆车立即计入。可在上方日期筛选里切到其他日期。';
+    : '只看当天、实时更新：格内为当天 实际 / 预测 车数（按板服务商为板数），下行为单量，按车服务商再下一行为托数（填报托数 / 早上预测的 Gaylord + 托盘）；仓库每提交一辆车立即计入。可在上方日期筛选里切到其他日期。';
   $('actSrc').style.display = 'none';
 }
 function render(){
