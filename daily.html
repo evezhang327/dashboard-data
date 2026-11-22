@@ -629,6 +629,16 @@ async function loadLive(){
   for(const x of [w,r,a]) if(x.error) throw x.error;
   if(w.data.length) S.warehouses=w.data.filter(x=>!EXCLUDED.has(x.code) && x.forecast_enabled!==false);
   S.runs=r.data; S.actual=a.data; S.lines={};
+  // 大促周末（11/20–12/4 的周六、周日）没有截单：改用下单时间口径（前一天当地 15:00 ~ 当天 15:00）
+  try{
+    const isPW=d=>{ const w=new Date(d+'T12:00:00Z').getUTCDay(); return (w===0||w===6) && d>='2026-11-20' && d<='2026-12-04'; };
+    const o=await sb.from('daily_orders').select('*').gte('date',from).limit(20000);
+    if(!o.error && o.data.length){
+      const has=new Set(o.data.filter(x=>isPW(x.date)).map(x=>x.warehouse+'|'+x.date));
+      S.actual = S.actual.filter(x=>!(isPW(x.date) && has.has(x.warehouse+'|'+x.date)))
+        .concat(o.data.filter(x=>isPW(x.date)).map(x=>({warehouse:x.warehouse, date:x.date, cat:x.cat, carrier:x.carrier, due:x.orders, pre_done:x.pre_done, done:x.done, late:Math.max(0,x.orders-x.done), packed:x.packed, final:x.final})));
+    }
+  }catch(e){ console.warn('daily_orders', e); }
   try{
     const [f,p]=await Promise.all([sb.from('forecast').select('date,warehouse,carrier,fc_units,fc_orders').limit(5000), sb.from('pickups').select('date,warehouse,carrier,orders,pallets,voided').gte('date',from).limit(20000)]);
     if(!f.error&&f.data.length) S.peak=f.data; if(!p.error) S.pickups=p.data.filter(x=>!x.voided);
