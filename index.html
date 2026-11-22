@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>/* 手机排错：脚本出错时在页面底部显示原因（ES5，旧浏览器也能跑） */(function(){function show(m){try{var d=document.getElementById('jsErr');if(!d){d=document.createElement('div');d.id='jsErr';d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#b91c1c;color:#fff;font:12px/1.4 -apple-system,sans-serif;padding:8px 10px;word-break:break-all';(document.body||document.documentElement).appendChild(d);}d.textContent='页面出错，请截图发给管理员：'+m+' | '+navigator.userAgent;}catch(e){}}window.addEventListener('error',function(e){var t=e.target||{};show(t.src?('资源加载失败 '+t.src):((e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'')));},true);window.addEventListener('unhandledrejection',function(e){var r=e.reason;show('Promise: '+(r&&r.message||r));});})();</script>
 <title>大促提货看板 · 2026 Black Friday</title>
 <script src="config.js" onerror="void 0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
