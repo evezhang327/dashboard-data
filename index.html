@@ -406,7 +406,7 @@ const I18N = (()=>{
   '实时 · 已连接数据库':'Live · connected to database',
   '实际到车 / 预测车数':'Actual / forecast trucks',
   '实际板数 / 预测板数':'Actual / forecast pallets',
-  '容器交接托数 / 预测板数':'Handover containers / forecast pallets', ' 容器交接 · 实际绑车 / 应绑车 / 黑五预测':' handover · bound / needed / peak-forecast trucks', '实际绑车 / 应绑车 / 黑五预测':'bound / needed / peak forecast', '辆':'trucks', '实际绑车 ':'Bound ', '应绑车 ':'Needed ', ' 板 · ':' plt · ', ' 板':' plt', '待绑 ':'Unbound ', ' 车':' trucks', ' 容器交接':' container handover', '11/20 起累计 ':'Since 11/20: ', ' 车 · ':' trucks · ', ' 托 · ':' cont. · ', ' 件':' pcs',
+  '容器交接托数 / 预测板数':'Handover containers / forecast pallets', ' 容器交接 · ':' handover · ', '实际绑车':'Bound', '应绑车':'Needed', '黑五预测':'Peak forecast', '辆':'trucks', '实际绑车 ':'Bound ', '应绑车 ':'Needed ', ' 板 · ':' plt · ', ' 板':' plt', '待绑 ':'Unbound ', ' 车':' trucks', ' 容器交接':' container handover', '11/20 起累计 ':'Since 11/20: ', ' 车 · ':' trucks · ', ' 托 · ':' cont. · ', ' 件':' pcs',
   '按早上预测的预派车提醒':'Planned-truck reminders from the morning forecast',
   '这天还没有实际做货数据':'No actual volume for this day yet',
   '预派车的服务商都已登记':'All carriers with planned trucks have checked in',
@@ -904,10 +904,14 @@ function setHandover(rows){
     for(const t of (r.trailers||[])) S.hoRows.push({date:r.date, warehouse:r.warehouse, carrier:r.carrier, trailer_no:t.trailer, orders:t.packages, pallets:t.containers, auto:true}); }
 }
 const hoOf = (wh,c,d) => (S.ho||{})[wh+'|'+c+'|'+d];
-// 绑车：53 尺车按 30 板一车算应绑车数；实际绑车 = iWMS 里绑了车号的车数 / 板数
+// 绑车：实际绑车 = iWMS 里绑了车号的车数 / 板数；应绑车 = 实际绑车 + 未绑车号的板数按 53 尺 30 板一车折算
 const HO_PER_TRUCK = 30;
+const HOC = {b:'#E1251B', n:'#0f172a', f:'#64748b'};
+const hoTriple = (b,n,f,big) => `<span style="color:${HOC.b}">${fmt(b)}</span> / <span style="color:${HOC.n}">${fmt(n)}</span>${f?` / <span style="color:${HOC.f}">${fmt(f)}</span>`:''}`;
+const hoLabel = f => `<span style="color:${HOC.b}">实际绑车</span> / <span style="color:${HOC.n}">应绑车</span>${f?` / <span style="color:${HOC.f}">黑五预测</span>`:''}`;
 const hoBind = ho => { const tot=ho.containers||0, bc=(ho.trailers||[]).reduce((t,x)=>t+(x.containers||0),0);
-  return {bound:ho.trucks||0, need: tot? Math.ceil(tot/HO_PER_TRUCK) : 0, boundCont:bc, totCont:tot}; };
+  const bound=ho.trucks||0;   // 应绑车 = 已绑的车 + 没绑车号的板数 ÷ 30（已绑的车按实际车数算，不按 30 板折）
+  return {bound, need: bound + Math.ceil(Math.max(0,tot-bc)/HO_PER_TRUCK), boundCont:bc, totCont:tot}; };
 const isHo = (wh,c) => HO_COMBOS.has(wh+'|'+c);
 // 到车记录 = 人工填报 + 容器交接车次（容器交接的格子以 iWMS 为准，同格人工填报不再重复计算）
 function pkRows(dates){ const ds=new Set(dates||datesInScope());
@@ -918,7 +922,7 @@ function hoCell(w,c,ho,fu,fOrd,hasOrdFc,future){
   const b = hoBind(ho);
   const st = b.need ? (status(b.bound,b.need,future)||['st-auto','']) : ['st-auto',''];
   const tips = (ho.trailers||[]).map(t=>`${t.trailer}：${fmt(t.containers)} 板`).join('\n');
-  return `<td><div class="cell ${st[0]} ho" title="${esc(w)} · ${c} · 容器交接（iWMS）· 应绑车按 53 尺 ${HO_PER_TRUCK} 板/车\n${esc(tips)}"><div class="u">${fmt(b.bound)} / ${fmt(b.need)} / ${fu?fmt(fu):'—'} <span class="ho-sub">辆</span></div><div class="o">实际绑车 / 应绑车 / 黑五预测</div><div class="o">实际绑车 ${fmt(b.boundCont)} 板 · 应绑车 ${fmt(b.totCont)} 板</div><div class="s"><span class="ho-tag">容器交接</span>${b.bound<b.need?` <span class="ho-unb">待绑 ${fmt(b.need-b.bound)} 车</span>`:''}</div></div></td>`;
+  return `<td><div class="cell ${st[0]} ho" title="${esc(w)} · ${c} · 容器交接（iWMS）· 应绑车按 53 尺 ${HO_PER_TRUCK} 板/车\n${esc(tips)}"><div class="u">${hoTriple(b.bound,b.need,0)} <span class="ho-sub">辆</span></div><div class="o">${hoLabel(0)}</div><div class="o">实际绑车 ${fmt(b.boundCont)} 板 · 应绑车 ${fmt(b.totCont)} 板</div><div class="s"><span class="ho-tag">容器交接</span>${b.bound<b.need?` <span class="ho-unb">待绑 ${fmt(b.need-b.bound)} 车</span>`:''}</div></div></td>`;
 }
 
 function agg(fc, pk){
@@ -1003,7 +1007,7 @@ function renderHero(){
     <div class="grid">
       <div><small>${toLbl||'截至今天'} 预测应达</small><b>${notStarted?'—':fmt(fcTo)}</b></div>
       <div><small>实际到车 / 预测车数</small><b>${notStarted?`— / ${fmt(aAll.fcTrucks)}`:`${fmt(aTo.acTrucks)} / ${fmt(aTo.fcTrucks)}`}</b></div>
-      <div title="LAX4 / NJ1 Amazon、NJ5 FedEx Ground：iWMS 容器交接。应绑车 = 交接板数 ÷ 30（53 尺车），实际绑车 = 已在 iWMS 绑车号的车"><small>${md(hoDay)} 容器交接 · 实际绑车 / 应绑车 / 黑五预测</small><b>${notStarted?'—':`${fmt(hoB)} / ${fmt(hoN)} / ${hoFu?fmt(hoFu):'—'}<span style="font-size:13px;color:var(--ink3);font-weight:600"> 辆</span>`}</b><div class="hint" style="margin-top:2px">实际绑车 ${fmt(hoBC)} 板 · 应绑车 ${fmt(hoTC)} 板</div></div>
+      <div title="LAX4 / NJ1 Amazon、NJ5 FedEx Ground：iWMS 容器交接。实际绑车 = 已在 iWMS 绑车号的车；应绑车 = 实际绑车 + 未绑车号的板数 ÷ 30（53 尺车）"><small>${md(hoDay)} 容器交接 · ${hoLabel(0)}</small><b>${notStarted?'—':`${hoTriple(hoB,hoN,0)}<span style="font-size:13px;color:var(--ink3);font-weight:600"> 辆</span>`}</b><div class="hint" style="margin-top:2px">实际绑车 ${fmt(hoBC)} 板 · 应绑车 ${fmt(hoTC)} 板</div></div>
       <div><small>已填报仓库</small><b>${notStarted?'—':filledWh+' / '+scopeWh}</b></div>
       <div><small>异常车次</small><b>${notStarted?'—':fmt(aTo.exceptions)}</b></div>
     </div>`;
