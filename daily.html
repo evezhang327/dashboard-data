@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>/* 手机排错：脚本出错时在页面底部显示原因（ES5，旧浏览器也能跑） */(function(){function show(m){try{var d=document.getElementById('jsErr');if(!d){d=document.createElement('div');d.id='jsErr';d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#b91c1c;color:#fff;font:12px/1.4 -apple-system,sans-serif;padding:8px 10px;word-break:break-all';(document.body||document.documentElement).appendChild(d);}d.textContent='页面出错，请截图发给管理员：'+m+' | '+navigator.userAgent;}catch(e){}}window.addEventListener('error',function(e){var t=e.target||{};show(t.src?('资源加载失败 '+t.src):((e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'')));},true);window.addEventListener('unhandledrejection',function(e){var r=e.reason;show('Promise: '+(r&&r.message||r));});})();</script>
+<script>/* 手机排错：脚本出错时在页面底部显示原因（ES5，旧浏览器也能跑） */(function(){function show(m){try{var d=document.getElementById('jsErr');if(!d){d=document.createElement('div');d.id='jsErr';d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#b91c1c;color:#fff;font:12px/1.4 -apple-system,sans-serif;padding:8px 10px;word-break:break-all';(document.body||document.documentElement).appendChild(d);}d.textContent='页面出错，请截图发给管理员：'+m+' | '+navigator.userAgent;}catch(e){}}window.addEventListener('error',function(e){var t=e.target||{};if(String(e.filename||'').indexOf('/supabase.js')>-1)return;show(t.src?('资源加载失败 '+t.src):((e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'')));},true);window.addEventListener('unhandledrejection',function(e){var r=e.reason;show('Promise: '+(r&&r.message||r));});})();</script>
 <title>日均预测 · 今日出库预测 · 2026 Black Friday</title>
 <script src="config.js" onerror="void 0"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase.js"></script>
+<script>window.supabase||document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>')</script>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--line:#e7e8ec;--line2:#f0f1f4;--ink:#0f172a;--ink2:#475569;--ink3:#94a3b8;--blue:#E1251B;--blue-soft:#fdeceb;--red:#E1251B;--fc:#d5d9e0;--good:#0ca30c;--good-ink:#0a7a0a;--good-bg:#e9f7e9;--warn-bg:#fdf4e1;--bad:#d03b3b;--bad-bg:#fbeaea;--muted-bg:#f1f3f6}
 *{box-sizing:border-box}
