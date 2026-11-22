@@ -857,10 +857,12 @@ async function loadDaily(){
   // 大促口径：按下单时间分日期（前一天当地 15:00 ~ 当天 15:00 = 当天货量），有 daily_orders 的仓/日期优先用它，没有的退回截单日口径
   const o = await sb.from('daily_orders').select('warehouse,date,carrier,orders,pre_done,packed').eq('cat','京东尾程').gte('date',rf).lte('date',rt).limit(20000);
   const od = (!o.error && o.data) ? o.data.filter(l=>DAILY_PEAK[l.carrier]) : [];
-  const hasO = new Set(od.map(l=>l.warehouse+'|'+l.date));
+  const hasO = new Set(od.map(l=>l.warehouse+'|'+l.date)), hasOW = new Set(od.map(l=>l.warehouse));
+  const tdy = refToday();
   S.dailyActual = [
     ...od.map(l=>({date:l.date, warehouse:l.warehouse, carrier:DAILY_PEAK[l.carrier], need:(l.orders||0)-(l.pre_done||0), pre:l.pre_done||0, packed:l.packed||0})),
-    ...a.data.filter(l=>DAILY_PEAK[l.carrier] && !hasO.has(l.warehouse+'|'+l.date)).map(l=>({date:l.date, warehouse:l.warehouse, carrier:DAILY_PEAK[l.carrier], need:l.due-l.pre_done, pre:l.pre_done||0, packed:null}))];
+    // 已切到下单量口径的仓：不再用截单日口径补（截单日口径的周一包含整个周末，会重复算）
+    ...a.data.filter(l=>DAILY_PEAK[l.carrier] && !hasO.has(l.warehouse+'|'+l.date) && !(hasOW.has(l.warehouse) && (l.date>tdy || l.date>='2026-11-21'))).map(l=>({date:l.date, warehouse:l.warehouse, carrier:DAILY_PEAK[l.carrier], need:l.due-l.pre_done, pre:l.pre_done||0, packed:null}))];
 }
 function makeDemoDaily(){
   let seed=29; const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
@@ -1073,7 +1075,7 @@ function renderCharts(){
     dl: dl.length? dl.reduce((s,r)=>s+r.est,0) : null,
     pre: S.actSrc==='iwms' ? daAll.filter(r=>r.date===d).reduce((s,r)=>s+r.pre,0) : 0,
     pk: daAll.filter(r=>r.date===d&&r.packed!=null).reduce((s,r)=>s+r.packed,0),
-    ac: S.actSrc==='iwms' ? daAll.filter(r=>r.date===d).reduce((s,r)=>s+r.need+r.pre,0) : pkAll.filter(r=>r.date===d).reduce((s,r)=>s+(r.orders||0),0)}; });
+    ac: S.actSrc==='iwms' ? daAll.filter(r=>r.date===d).reduce((s,r)=>s+(d>refToday()?0:r.need)+r.pre,0) : pkAll.filter(r=>r.date===d).reduce((s,r)=>s+(r.orders||0),0)}; });
   $('actSrc').innerHTML = [['pickup','实际：仓库填报交接单量'],['iwms','实际：实际需做']].map(([k,v])=>`<span class="chip ${S.actSrc===k?'on':''}" data-src="${k}">${v}</span>`).join('');
   const ed=elapsedDates(), sumTo=f=>so.filter(x=>ed.includes(x.date)).reduce((t,x)=>t+(x[f]||0),0);
   const dlDays=so.filter(x=>ed.includes(x.date)&&x.dl!=null).length;
