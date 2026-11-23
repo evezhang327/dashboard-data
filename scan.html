@@ -234,7 +234,7 @@ function renderMatrix(){
 }
 
 // ---------- 异常明细
-const TYPES=[['all','全部异常'],['noho_b','截单前未交接'],['wknd','周末单未交接'],['a48','24–48h 上网'],['a96','48–96h 上网'],['over','超 96h 上网'],['none','未上网 >24h'],['none48','未上网 >48h'],['none96','未上网 >96h'],['nonet','交接后未上网（含 24h 内）'],['dlate','妥投晚到 / 过期'],['tail','尾单未妥投'],['fake','虚假交接'],['gmis','GOFO 不一致']];
+const TYPES=[['all','全部异常'],['noho_b','截单前未交接'],['wknd','周末单未交接'],['a48','24–48h 上网'],['a96','48–96h 上网'],['over','超 96h 上网'],['none','未上网 >24h'],['none48','未上网 >48h'],['none96','未上网 >96h'],['nonet','交接后未上网（含 24h 内）'],['dlvna','无揽收记录直接妥投'],['dlate','妥投晚到 / 过期'],['tail','尾单未妥投'],['fake','虚假交接'],['gmis','GOFO 不一致']];
 function detQuery(count){
   const d=S.det;
   let q=sb.from('scan_pkg').select(count?'pkg':'*',count?{count:'exact',head:true}:undefined).gte('pack_date',S.f.from).lte('pack_date',S.f.to);
@@ -243,14 +243,14 @@ function detQuery(count){
   if(wh) q=q.eq('wh',wh); if(car) q=q.eq('carrier',car); if(d.date) q=q.eq('pack_date',d.date);
   const t=d.type;
   if(t==='noho_b') q=q.eq('a_bucket','noho_b'); else if(t==='fake') q=q.eq('fake_ho',true);
-  else if(t==='a48') q=q.eq('a_bucket','48'); else if(t==='a96') q=q.eq('a_bucket','96'); else if(t==='over') q=q.eq('a_bucket','over'); else if(t==='none') q=q.eq('a_bucket','none'); else if(t==='nonet') q=q.in('a_bucket',['wait','none']); else if(t==='wknd') q=q.eq('weekend',true).in('a_bucket',['noho_a','noho_b']);
+  else if(t==='a48') q=q.eq('a_bucket','48'); else if(t==='a96') q=q.eq('a_bucket','96'); else if(t==='over') q=q.eq('a_bucket','over'); else if(t==='none') q=q.eq('a_bucket','none'); else if(t==='nonet') q=q.in('a_bucket',['wait','none']); else if(t==='dlvna') q=q.eq('a_bucket','dlv_noasc'); else if(t==='wknd') q=q.eq('weekend',true).in('a_bucket',['noho_a','noho_b']);
   else if(t==='late') q=q.eq('d_bucket','late'); else if(t==='dover') q=q.eq('d_bucket','over'); else if(t==='none48') q=q.eq('a_bucket','none').gt('a_since',48); else if(t==='none96') q=q.eq('a_bucket','none').gt('a_since',96); else if(t==='dlate') q=q.in('d_bucket',['late','over']);
   else if(t==='tail') q=q.eq('tail_done',true).in('d_bucket',['tr','over','noplan']); else if(t==='gmis') q=q.eq('g_mismatch',true);
   if(d.q){ const s=d.q.replace(/[,()]/g,''); q=q.or(`pkg.ilike.%${s}%,so.ilike.%${s}%,jdw.ilike.%${s}%`); }
   return q;
 }
 function excTags(r){
-  const t=[]; const A={'noho_b':['截单前未交接','bad'],'48':['24–48h 上网','warn'],'96':['48–96h 上网','warn'],'over':['超 96h 上网','bad'],'none':['交接后 >24h 未上网','bad'],'wait':['交接后未上网（24h 内）','warn']}[r.a_bucket];
+  const t=[]; const A={'noho_b':['截单前未交接','bad'],'48':['24–48h 上网','warn'],'96':['48–96h 上网','warn'],'over':['超 96h 上网','bad'],'none':['交接后 >24h 未上网','bad'],'wait':['交接后未上网（24h 内）','warn'],'dlv_noasc':['无揽收记录直接妥投','bad']}[r.a_bucket];
   if(r.weekend) t.push(['周末单','info']);
   if(!A&&r.a_bucket==='noho_a'&&r.weekend) t.push(['周末未交接（周一起算）','warn']);
   if(A) t.push(A); if(r.fake_ho) t.push(['虚假交接','info']);
