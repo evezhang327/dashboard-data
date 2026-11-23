@@ -1389,7 +1389,7 @@ $('btnRefresh').onclick=async()=>{
 };
 async function resumeRefresh(){
   const since=new Date(Date.now()-3*3600e3).toISOString();
-  const r=await sb.from('refresh_requests').select('id,status').in('status',['pending','running']).gte('requested_at',since).order('id',{ascending:false}).limit(1);
+  const r=await sb.from('refresh_requests').select('id,status').neq('scope','scan').in('status',['pending','running']).gte('requested_at',since).order('id',{ascending:false}).limit(1);
   if(!r.error && r.data.length){ $('btnRefresh').disabled=true; pollRefresh(r.data[0].id); }
 }
 $('btnExport').onclick=exportCsv;
