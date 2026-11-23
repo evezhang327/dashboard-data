@@ -59,6 +59,7 @@ tr.click{cursor:pointer} tr.click:hover td{background:#fff7f6}
 .mx td.c-good{background:#eef8ee}.mx td.c-ok{background:#fff}.mx td.c-warn{background:#fdf6e6}.mx td.c-bad{background:#fbe9e9}
 .tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--muted);color:var(--ink2);margin-right:3px}
 .tag.bad{background:var(--bad-bg);color:var(--bad)}.tag.warn{background:var(--warn-bg);color:var(--warn)}.tag.info{background:#eef2ff;color:#3949ab}
+.rfstat{padding:10px 14px;border-radius:12px;background:#f3f6ff;color:#23408e;border:1px solid #d6e0fb;margin-bottom:14px;font-size:13px}.rfstat.ok{background:#f1faf1;color:#1d6b1d;border-color:#cde9cd}.rfstat.bad{background:#fff6f5;color:#8a1c14;border-color:#fbd5d1}
 .banner{padding:10px 14px;border-radius:12px;background:#fff6f5;color:#8a1c14;border:1px solid #fbd5d1;margin-bottom:14px;font-size:13px}
 .banner.info{background:#eef2f7;color:var(--ink2);border-color:#e1e6ee}
 .empty{color:var(--ink3);text-align:center;padding:26px 10px;font-size:13px}
@@ -97,10 +98,11 @@ tr.click{cursor:pointer} tr.click:hover td{background:#fff7f6}
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span class="hint" id="runInfo"></span>
-      <button class="btn" id="btnReload">刷新</button>
+      <button class="btn" id="btnReload" title="让 Mac 重新从 WMS / ISC / GOFO 抓一遍（约 5 分钟），跑完自动更新">刷新</button>
       <button class="btn" id="btnLogout">退出</button>
     </div>
   </header>
+  <div id="rfStat" class="rfstat" style="display:none"></div>
   <div id="banner"></div>
   <section class="card filters">
     <div><label>打包日 从</label><input type="date" id="fFrom"></div>
@@ -322,7 +324,38 @@ $('detScope').onclick=e=>{ if(e.target.id==='btnClr'){ S.det.wh=S.det.car=S.det.
 $('btnMore').onclick=()=>loadDetail(false);
 let _qt; $('fPkg').oninput=e=>{clearTimeout(_qt); _qt=setTimeout(()=>{S.det.q=e.target.value.trim(); loadDetail(true);},400);};
 $('btnExport').onclick=exportCsv;
-$('btnReload').onclick=reload;
+// 刷新：写一条 refresh_requests(scope=scan)，Mac 上的 refresh_watch.py 每分钟检查一次，看到后马上跑 ascan_sync.py
+let rfTimer=null;
+const tPT=s=>s?new Date(s).toLocaleTimeString('zh-CN',{timeZone:'America/Los_Angeles',hour:'2-digit',minute:'2-digit'}):'';
+function setRf(txt,c){ const el=$('rfStat'); el.style.display=txt?'':'none'; el.className='rfstat'+(c?' '+c:''); el.textContent=txt||''; }
+async function pollRf(id){
+  clearTimeout(rfTimer);
+  const r=await sb.from('refresh_requests').select('id,status,message,requested_at,started_at,finished_at').eq('id',id).single();
+  if(r.error){ setRf('读取抓取状态失败：'+r.error.message,'bad'); $('btnReload').disabled=false; return; }
+  const x=r.data;
+  if(x.status==='pending'){
+    const m=(Date.now()-new Date(x.requested_at))/60000;
+    setRf(m>3?`⏳ 已等待 ${Math.round(m)} 分钟，Mac 还没开始抓取：请确认 Mac 开机联网、Chrome 里 ISC / iWMS / GOFO DMS 已登录`:'⏳ 已发送抓取请求，Mac 会在 1 分钟内开始…');
+    rfTimer=setTimeout(()=>pollRf(id),15000);
+  } else if(x.status==='running'){
+    setRf(`🔄 正在从 WMS / ISC / GOFO 重新抓取（${tPT(x.started_at)} 开始，约 5 分钟），跑完自动更新`);
+    rfTimer=setTimeout(()=>pollRf(id),15000);
+  } else {
+    $('btnReload').disabled=false; await reload();
+    setRf((x.status==='done'?'✅ 已重新抓取 ':'⚠️ 抓取失败 ')+tPT(x.finished_at)+' PT'+(x.status!=='done'&&x.message?' · '+x.message:''), x.status==='done'?'ok':'bad');
+  }
+}
+$('btnReload').onclick=async()=>{
+  $('btnReload').disabled=true;
+  const r=await sb.from('refresh_requests').insert({scope:'scan'}).select('id').single();
+  if(r.error){ setRf('发送抓取请求失败：'+r.error.message,'bad'); $('btnReload').disabled=false; reload(); return; }
+  pollRf(r.data.id);
+};
+async function resumeRf(){
+  const since=new Date(Date.now()-2*3600e3).toISOString();
+  const r=await sb.from('refresh_requests').select('id').eq('scope','scan').in('status',['pending','running']).gte('requested_at',since).order('id',{ascending:false}).limit(1);
+  if(!r.error&&r.data.length){ $('btnReload').disabled=true; pollRf(r.data[0].id); }
+}
 $('btnLogout').onclick=async()=>{await sb.auth.signOut(); location.reload();};
 $('loginForm').onsubmit=async e=>{e.preventDefault(); const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pwd').value}); if(error){$('loginErr').textContent='登录失败：'+error.message;return;} start();};
 
@@ -332,7 +365,7 @@ async function start(){
   const r=await sb.rpc('is_admin');
   if(!r.data){ $('loginView').style.display='block'; $('loginErr').textContent='当前账号不是管理员，没有查看权限，请换管理员账号登录。'; await sb.auth.signOut(); return; }
   $('loginView').style.display='none'; $('app').style.display='block';
-  setRange(7); reload();
+  setRange(7); reload(); resumeRf();
 }
 start();
 </script>
