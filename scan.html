@@ -187,7 +187,7 @@ function renderKpis(){
     k('Ascan 24hr',pf(r.a24),`48hr ${pf(r.a48)} · 96hr ${pf(r.a96)}`,true),
     k('交接后 >24h 未上网',fmt(a.anone),`24h 内待上网 ${fmt(a.await_)}`,!!a.anone),
     k('截单前未交接',fmt(a.noho_b),`截单后待交接 ${fmt(a.noho_a)}`,!!a.noho_b),
-    k('Dscan 准时率',pf(r.don),`晚到 ${fmt(a.d_l1+a.d_l2+a.d_l3)} · 过期未妥投 ${fmt(a.d_over)}`,true),
+    k('Dscan 准时率',pf(r.don),`晚到 1CD ${fmt(a.d_l1)} · 2CD ${fmt(a.d_l2)} · 3+CD ${fmt(a.d_l3)} · 过期未妥投 ${fmt(a.d_over)}`,true),
     k('妥投完成率',pf(r.tail),r.tail_den?`尾单到期 ${fmt(a.tail_den)}`:`暂无到期（在途 ${fmt(a.d_tr)}）`)].join('');
 }
 function sumRow(label,a,attrs,total){
@@ -197,7 +197,7 @@ function sumRow(label,a,attrs,total){
   return `<tr class="${total?'total':'click'}" ${attrs||''}><td>${label}</td><td class="num">${fmt(a.n)}</td>
   <td class="num bl ${cls(r.a24,'a24')}">${pf(r.a24)}</td><td class="num ${cls(r.a48)}">${pf(r.a48)}</td><td class="num ${cls(r.a96)}">${pf(r.a96)}</td>
   ${n(a.anone,'r-bad')}${n(a.noho_b,'r-bad')}<td class="num ${cls(r.fake,'fake')}" title="${fmt(a.fake)} 个">${pf(r.fake)}</td>
-  <td class="num bl ${cls(r.don)}">${pf(r.don)}</td>${n(late,'r-warn')}${n(a.d_over,'r-bad')}
+  <td class="num bl ${cls(r.don)}">${pf(r.don)}</td>${n(a.d_l1,'r-warn')}${n(a.d_l2,'r-warn')}${n(a.d_l3,'r-bad')}${n(a.d_over,'r-bad')}
   <td class="num ${cls(r.tail,'tail')}">${pf(r.tail)}</td><td class="bl">${bar}</td></tr>`;
 }
 function renderSummary(){
@@ -207,7 +207,7 @@ function renderSummary(){
   if(S.dim==='date') keys.sort().reverse(); else keys.sort((a,b)=>agg(g[b]).n-agg(g[a]).n);
   const head=`<thead><tr><th>${S.dim==='carrier'?'服务商':S.dim==='wh'?'仓库':'打包日'}</th><th class="num">包裹</th>
   <th class="num bl">Ascan 24hr</th><th class="num">48hr</th><th class="num">96hr</th><th class="num">交接后&gt;24h未上网</th><th class="num">截单前未交接</th><th class="num">虚假交接率</th>
-  <th class="num bl">Dscan 准时率</th><th class="num">晚到</th><th class="num">过期未妥投</th><th class="num">妥投完成率</th><th class="bl">妥投时效</th></tr></thead>`;
+  <th class="num bl">Dscan 准时率</th><th class="num">晚 1CD</th><th class="num">晚 2CD</th><th class="num">晚 3+CD</th><th class="num">过期未妥投</th><th class="num">妥投完成率</th><th class="bl">妥投时效</th></tr></thead>`;
   if(!keys.length){ $('sumTbl').innerHTML='<div class="empty">这个范围还没有数据</div>'; return; }
   const body=keys.map(k=>sumRow(S.dim==='wh'?esc(whn(k)):S.dim==='date'?md(k):esc(k),agg(g[k]),`data-k="${esc(k)}"`)).join('');
   $('sumTbl').innerHTML=`<table>${head}<tbody>${body}${sumRow('合计',agg(rows),'',true)}</tbody></table>`;
@@ -263,8 +263,8 @@ function renderDetail(){
   $('detCount').textContent=d.total!=null?`共 ${fmt(d.total)} 个包裹`:'';
   if(!d.rows.length){ $('detTbl').innerHTML='<div class="empty">没有符合条件的异常包裹</div>'; $('btnMore').style.display='none'; return; }
   const hrs=r=>{ const asc=r.i_asc||r.g_asc, ho=r.w_ho||r.i_ho; if(asc&&r.a_hours!=null) return r.a_hours<0?'早于交接':r.a_hours+'h'; if(ho&&r.a_since!=null) return `<span class="r-bad">未上网 ${r.a_since}h</span>`; return ''; };
-  $('detTbl').innerHTML=`<table><thead><tr>${['打包日','仓库','服务商','异常','包裹单号','打包','交接','揽收','揽收用时','计划妥投','实际妥投'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`+
-    d.rows.map(r=>`<tr><td>${md(r.pack_date)}</td><td>${esc(whn(r.wh))}</td><td>${esc(r.carrier)}</td><td>${excTags(r).map(x=>`<span class="tag ${x[1]}">${esc(x[0])}</span>`).join('')}</td><td title="出库单 ${esc(r.so||'')} · ${esc(r.spb||'')} ${esc(r.spb_name||'')}"><b>${esc(r.pkg)}</b></td><td>${tm(r.w_pack||r.i_pack)}</td><td>${tm(r.w_ho||r.i_ho)}</td><td title="${r.g_asc?'GOFO 首扫 '+esc(tm(r.g_asc)):''}">${tm(r.i_asc||r.g_asc)}</td><td class="num">${hrs(r)}</td><td>${tm(r.i_plan)}</td><td>${tm(r.i_dlv||r.g_dlv)}</td></tr>`).join('')+'</tbody></table>';
+  $('detTbl').innerHTML=`<table><thead><tr>${['打包日','仓库','服务商','异常','包裹单号','打包','交接','揽收','揽收用时','计划妥投','实际妥投','延迟'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`+
+    d.rows.map(r=>`<tr><td>${md(r.pack_date)}</td><td>${esc(whn(r.wh))}</td><td>${esc(r.carrier)}</td><td>${excTags(r).map(x=>`<span class="tag ${x[1]}">${esc(x[0])}</span>`).join('')}</td><td title="出库单 ${esc(r.so||'')} · ${esc(r.spb||'')} ${esc(r.spb_name||'')}"><b>${esc(r.pkg)}</b></td><td>${tm(r.w_pack||r.i_pack)}</td><td>${tm(r.w_ho||r.i_ho)}</td><td title="${r.g_asc?'GOFO 首扫 '+esc(tm(r.g_asc)):''}">${tm(r.i_asc||r.g_asc)}</td><td class="num">${hrs(r)}</td><td>${tm(r.i_plan)}</td><td>${tm(r.i_dlv||r.g_dlv)}</td><td class="num">${r.d_bucket==='late'?`<span class="${r.late_cd>=3?'r-bad':'r-warn'}">晚 ${r.late_cd} CD</span>`:r.d_bucket==='over'?`<span class="r-bad">已超 ${r.late_cd} CD 未妥投</span>`:''}</td></tr>`).join('')+'</tbody></table>';
   $('btnMore').style.display=d.rows.length<d.total?'':'none';
 }
 async function loadDetail(reset,_retry){
