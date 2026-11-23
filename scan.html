@@ -31,7 +31,7 @@ h1::before{content:"";display:inline-block;width:6px;height:24px;background:var(
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{border:0;background:#fff;padding:7px 12px;cursor:pointer;font-size:13px;color:var(--ink2)}
 .seg button.on{background:var(--red);color:#fff}
-.kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:12px;margin-bottom:16px}
+.kpis{display:grid;grid-template-columns:repeat(9,1fr);gap:12px;margin-bottom:16px}
 .kpi{padding:14px 16px}
 .kpi small{display:block;color:#6b7280;font-size:12px}
 .kpi b{display:block;font-size:24px;font-variant-numeric:tabular-nums;margin-top:2px}
@@ -70,6 +70,7 @@ tr.click{cursor:pointer} tr.click:hover td{background:#fff7f6}
 .chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--ink2)}
 .chips button.on{background:var(--ink);border-color:var(--ink);color:#fff}
 .chips button em{font-style:normal;opacity:.7;margin-left:4px}
+@media (max-width:1400px){.kpis{grid-template-columns:repeat(5,1fr)}}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(4,1fr)}}
 @media (max-width:640px){.wrap{padding:16px 12px 40px}h1{font-size:22px}.kpis{grid-template-columns:repeat(2,1fr)}.kpi b{font-size:20px}.filters select,.filters input{min-width:0;width:100%}.filters>div{flex:1 1 45%}}
 </style>
@@ -189,6 +190,7 @@ function renderKpis(){
     k('Ascan 48hr',pf(r.a48),`待揽收 ${fmt(a.await_)}`),
     k('Ascan 96hr',pf(r.a96),`>24h 未揽收 ${fmt(a.anone)}`),
     k('虚假交接',fmt(a.fake),pf(r.fake)+' 的包裹'),
+    k('交接后未上网',fmt(a.anone+a.await_),`超 24h ${fmt(a.anone)} · 24h 内 ${fmt(a.await_)}`,true),
     k('截单前未交接',fmt(a.noho_b),`截单后待交接 ${fmt(a.noho_a)}`),
     k('Dscan 准时率',pf(r.don),`晚到 ${fmt(a.d_l1+a.d_l2+a.d_l3)} · 过期未妥投 ${fmt(a.d_over)}`,true),
     k('妥投完成率',pf(r.tail),`尾单到期 ${fmt(a.tail_den)} · 在途 ${fmt(a.d_tr)}`)].join('');
@@ -209,7 +211,7 @@ function renderSummary(){
   let keys=Object.keys(g);
   if(S.dim==='date') keys.sort().reverse(); else keys.sort((a,b)=>agg(g[b]).n-agg(g[a]).n);
   const head=`<thead><tr><th rowspan="2">${S.dim==='carrier'?'服务商':S.dim==='wh'?'仓库':'打包日'}</th><th rowspan="2" class="num">包裹</th><th class="grp" colspan="8">Ascan（从交接起算）</th><th class="grp" colspan="7">Dscan（对比 ISC 计划妥投）</th><th class="grp" colspan="2">妥投完成率</th><th class="grp" colspan="5">妥投时效（交接→妥投）</th></tr>
-  <tr class="h2"><th class="num bl">24hr</th><th class="num">48hr</th><th class="num">96hr</th><th class="num">待揽收</th><th class="num">&gt;24h未揽收</th><th class="num">虚假交接</th><th class="num">截单前未交接</th><th class="num">截单后待交接</th>
+  <tr class="h2"><th class="num bl">24hr</th><th class="num">48hr</th><th class="num">96hr</th><th class="num">待揽收</th><th class="num">交接后&gt;24h未上网</th><th class="num">虚假交接</th><th class="num">截单前未交接</th><th class="num">截单后待交接</th>
   <th class="num bl">准时</th><th class="num">晚1CD</th><th class="num">晚2CD</th><th class="num">晚3+CD</th><th class="num">过期未妥投</th><th class="num">在途</th><th class="num">准时率</th>
   <th class="num bl">完成率</th><th class="num">已妥投/到期</th><th class="bl">分布</th><th class="num">≤3天</th><th class="num">4–5天</th><th class="num">6–7天</th><th class="num">&gt;7天</th></tr></thead>`;
   if(!keys.length){ $('sumTbl').innerHTML='<div class="empty">这个范围还没有数据</div>'; return; }
@@ -231,22 +233,23 @@ function renderMatrix(){
 }
 
 // ---------- 异常明细
-const TYPES=[['all','全部异常'],['noho_b','截单前未交接'],['fake','虚假交接'],['a48','48hr 揽收'],['a96','96hr 揽收'],['over','>96hr 揽收'],['none','>24h 未揽收'],['late','妥投晚到'],['dover','过期未妥投'],['tail','尾单未妥投'],['gmis','GOFO 不一致']];
+const TYPES=[['all','全部异常'],['noho_b','截单前未交接'],['fake','虚假交接'],['a48','48hr 揽收'],['a96','96hr 揽收'],['over','>96hr 揽收'],['nonet','交接后未上网'],['none','交接后 >24h 未上网'],['late','妥投晚到'],['dover','过期未妥投'],['tail','尾单未妥投'],['gmis','GOFO 不一致']];
 function detQuery(count){
   const d=S.det;
-  let q=sb.from('scan_pkg').select(count?'pkg':'*',count?{count:'exact',head:true}:undefined).eq('abnormal',true).gte('pack_date',S.f.from).lte('pack_date',S.f.to);
+  let q=sb.from('scan_pkg').select(count?'pkg':'*',count?{count:'exact',head:true}:undefined).gte('pack_date',S.f.from).lte('pack_date',S.f.to);
+  if(d.type!=='nonet') q=q.eq('abnormal',true);
   const wh=d.wh||(S.f.wh!=='ALL'?S.f.wh:null), car=d.car||(S.f.car!=='ALL'?S.f.car:null);
   if(wh) q=q.eq('wh',wh); if(car) q=q.eq('carrier',car); if(d.date) q=q.eq('pack_date',d.date);
   const t=d.type;
   if(t==='noho_b') q=q.eq('a_bucket','noho_b'); else if(t==='fake') q=q.eq('fake_ho',true);
-  else if(t==='a48') q=q.eq('a_bucket','48'); else if(t==='a96') q=q.eq('a_bucket','96'); else if(t==='over') q=q.eq('a_bucket','over'); else if(t==='none') q=q.eq('a_bucket','none');
+  else if(t==='a48') q=q.eq('a_bucket','48'); else if(t==='a96') q=q.eq('a_bucket','96'); else if(t==='over') q=q.eq('a_bucket','over'); else if(t==='none') q=q.eq('a_bucket','none'); else if(t==='nonet') q=q.in('a_bucket',['wait','none']);
   else if(t==='late') q=q.eq('d_bucket','late'); else if(t==='dover') q=q.eq('d_bucket','over');
   else if(t==='tail') q=q.eq('tail_done',true).in('d_bucket',['tr','over','noplan']); else if(t==='gmis') q=q.eq('g_mismatch',true);
   if(d.q){ const s=d.q.replace(/[,()]/g,''); q=q.or(`pkg.ilike.%${s}%,so.ilike.%${s}%,jdw.ilike.%${s}%`); }
   return q;
 }
 function excTags(r){
-  const t=[]; const A={'noho_b':['截单前未交接','bad'],'48':['48hr 揽收','warn'],'96':['96hr 揽收','warn'],'over':['>96hr 揽收','bad'],'none':['>24h 未揽收','bad']}[r.a_bucket];
+  const t=[]; const A={'noho_b':['截单前未交接','bad'],'48':['48hr 揽收','warn'],'96':['96hr 揽收','warn'],'over':['>96hr 揽收','bad'],'none':['交接后 >24h 未上网','bad'],'wait':['交接后未上网（24h 内）','warn']}[r.a_bucket];
   if(A) t.push(A); if(r.fake_ho) t.push(['虚假交接','info']);
   if(r.d_bucket==='late') t.push([`晚到 ${r.late_cd}CD`,r.late_cd>=3?'bad':'warn']); if(r.d_bucket==='over') t.push([`过期未妥投 ${r.late_cd}CD`,'bad']);
   if(r.tail_done&&['tr','over','noplan'].includes(r.d_bucket)) t.push(['尾单未妥投','bad']); if(r.g_mismatch) t.push(['GOFO 不一致','info']);
@@ -265,8 +268,8 @@ function renderDetail(){
   $('detScope').innerHTML=scope.length?`已筛选：${esc(scope.join(' · '))} <button class="btn sm" id="btnClr">清除</button>`:'';
   $('detCount').textContent=d.total!=null?`共 ${fmt(d.total)} 个包裹`:'';
   if(!d.rows.length){ $('detTbl').innerHTML='<div class="empty">没有符合条件的异常包裹</div>'; $('btnMore').style.display='none'; return; }
-  $('detTbl').innerHTML=`<table><thead><tr>${['打包日','仓库','服务商','异常','包裹单号','出库单号','SPB','截单','打包','交接','揽收','GOFO首扫','用时h','计划妥投','实际妥投'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`+
-    d.rows.map(r=>`<tr><td>${md(r.pack_date)}</td><td>${esc(whn(r.wh))}</td><td>${esc(r.carrier)}</td><td>${excTags(r).map(x=>`<span class="tag ${x[1]}">${esc(x[0])}</span>`).join('')}</td><td><b>${esc(r.pkg)}</b></td><td>${esc(r.so||'')}</td><td title="${esc(r.spb_name||'')}">${esc(r.spb||'')}</td><td>${tm(r.w_cutoff||r.i_cutoff)}</td><td>${tm(r.w_pack||r.i_pack)}</td><td>${tm(r.w_ho||r.i_ho)}</td><td>${tm(r.i_asc)}</td><td>${tm(r.g_asc)}</td><td class="num">${r.a_hours==null?'':r.a_hours}</td><td>${tm(r.i_plan)}</td><td>${tm(r.i_dlv||r.g_dlv)}</td></tr>`).join('')+'</tbody></table>';
+  $('detTbl').innerHTML=`<table><thead><tr>${['打包日','仓库','服务商','异常','包裹单号','出库单号','SPB','截单','打包','交接','交接后h','揽收','GOFO首扫','用时h','计划妥投','实际妥投'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`+
+    d.rows.map(r=>`<tr><td>${md(r.pack_date)}</td><td>${esc(whn(r.wh))}</td><td>${esc(r.carrier)}</td><td>${excTags(r).map(x=>`<span class="tag ${x[1]}">${esc(x[0])}</span>`).join('')}</td><td><b>${esc(r.pkg)}</b></td><td>${esc(r.so||'')}</td><td title="${esc(r.spb_name||'')}">${esc(r.spb||'')}</td><td>${tm(r.w_cutoff||r.i_cutoff)}</td><td>${tm(r.w_pack||r.i_pack)}</td><td>${tm(r.w_ho||r.i_ho)}</td><td class="num">${(r.w_ho||r.i_ho)&&r.a_since!=null&&!(r.i_asc||r.g_asc)?r.a_since:''}</td><td>${tm(r.i_asc)}</td><td>${tm(r.g_asc)}</td><td class="num">${r.a_hours==null?'':r.a_hours}</td><td>${tm(r.i_plan)}</td><td>${tm(r.i_dlv||r.g_dlv)}</td></tr>`).join('')+'</tbody></table>';
   $('btnMore').style.display=d.rows.length<d.total?'':'none';
 }
 async function loadDetail(reset,_retry){
