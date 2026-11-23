@@ -189,7 +189,7 @@ function renderKpis(){
   const k=(l,v,s,red)=>`<div class="card kpi${red?' red':''}"><small>${l}</small><b>${v}</b><i>${s||''}</i></div>`;
   $('kpis').innerHTML=[
     k('包裹数',fmt(a.n),`未交接 ${fmt(a.noho_b+a.noho_a)} · 虚假交接 ${fmt(a.fake)}`),
-    k('Ascan 24hr',pf(r.a24),`${fmt(a.a24)} / ${fmt(a.den24)}`,true),
+    k('Ascan 24hr',pf(r.a24),`${fmt(a.a24)} / ${fmt(a.den24)}${a.await_?` · 待定 ${fmt(a.await_)}`:''}`,true),
     k('Ascan 48hr',pf(r.a48),`24–48h 上网 ${fmt(a.a48)}`,true),
     k('Ascan 96hr',pf(r.a96),`48–96h 上网 ${fmt(a.a96)} · 超 96h ${fmt(a.aover)}`,true),
     k('交接后未上网',fmt(a.anone),`超 48h ${fmt(Math.max(0,a.den48-a.a24-a.a48-a.a96-a.aover))} · 超 96h ${fmt(Math.max(0,a.den96-a.a24-a.a48-a.a96-a.aover))} · 24h 内 ${fmt(a.await_)}`,!!a.anone),
@@ -202,7 +202,7 @@ function sumRow(label,a,attrs,total){
   const bar=r.tdel?`<div class="bar" title="交接→妥投：≤3天 ${pf(r.t3)} · 4-5天 ${pf(r.t5)} · 6-7天 ${pf(r.t7)} · >7天 ${pf(r.t8)}"><i style="width:${r.t3}%;background:#0ca30c"></i><i style="width:${r.t5}%;background:#8bc34a"></i><i style="width:${r.t7}%;background:#f0b400"></i><i style="width:${r.t8}%;background:#e1251b"></i></div>`:'<span class="hint">—</span>';
   const n=(v,c)=>`<td class="num ${v?c:''}">${v?fmt(v):'<span class="hint">0</span>'}</td>`;
   return `<tr class="${total?'total':'click'}" ${attrs||''}><td>${label}</td><td class="num">${fmt(a.n)}</td>
-  <td class="num bl ${cls(r.a24,'a24')}">${pf(r.a24)}</td><td class="num ${cls(r.a48)}">${pf(r.a48)}</td><td class="num ${cls(r.a96)}">${pf(r.a96)}</td>
+  <td class="num bl ${cls(r.a24,'a24')}" title="已满 24h 或已上网的 ${fmt(a.den24)} 个包裹里，24h 内上网 ${fmt(a.a24)} 个；交接未满 24h 的 ${fmt(a.await_)} 个还没算进来">${pf(r.a24)}${a.await_?`<small class="hint" style="display:block;font-weight:400">待定 ${fmt(a.await_)}</small>`:''}</td><td class="num ${cls(r.a48)}">${pf(r.a48)}</td><td class="num ${cls(r.a96)}">${pf(r.a96)}</td>
   ${n(a.anone,'r-warn')}${n(Math.max(0,a.den48-a.a24-a.a48-a.a96-a.aover),'r-bad')}${n(Math.max(0,a.den96-a.a24-a.a48-a.a96-a.aover),'r-bad')}${n(a.noho_b,'r-bad')}<td class="num ${cls(r.fake,'fake')}" title="${fmt(a.fake)} 个">${pf(r.fake)}</td>
   <td class="num bl ${cls(r.don)}">${pf(r.don)}</td>${n(a.d_l1,'r-warn')}${n(a.d_l2,'r-warn')}${n(a.d_l3,'r-bad')}${n(a.d_over,'r-bad')}
   <td class="num ${cls(r.tail,'tail')}">${pf(r.tail)}</td><td class="bl">${bar}</td></tr>`;
