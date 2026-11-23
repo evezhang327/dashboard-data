@@ -104,7 +104,7 @@ tr.click{cursor:pointer} tr.click:hover td{background:#fff7f6}
     </div>
   </header>
   <div id="permPanel" class="card" style="display:none;padding:16px 18px;margin-bottom:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b>查看权限</b><span class="hint">管理员默认可看；下面的账号只能查看本看板（及点「刷新」），不能改其他页面</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b>查看权限</b><span class="hint">管理员默认可看；下面的账号只能查看本看板（「刷新」只重新读取数据，不会触发重新抓取），不能改其他页面</span></div>
     <form id="permForm" style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap"><input id="permEmail" type="email" placeholder="对方登录邮箱" required style="flex:1;min-width:220px;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><input id="permNote" placeholder="备注（姓名/部门，可选）" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><button class="btn" type="submit">添加</button></form>
     <div id="permMsg" class="hint" style="min-height:18px"></div>
     <table class="tbl" style="width:100%"><thead><tr><th style="text-align:left">邮箱</th><th style="text-align:left">备注</th><th style="text-align:left">添加时间</th><th></th></tr></thead><tbody id="permList"></tbody></table>
@@ -352,7 +352,9 @@ async function pollRf(id){
     setRf((x.status==='done'?'✅ 已重新抓取 ':'⚠️ 抓取失败 ')+tPT(x.finished_at)+' PT'+(x.status!=='done'&&x.message?' · '+x.message:''), x.status==='done'?'ok':'bad');
   }
 }
+let IS_ADMIN=false;
 $('btnReload').onclick=async()=>{
+  if(!IS_ADMIN){ reload(); return; }   // 非管理员：只重新读取看板数据，不触发 Mac 重新抓取
   $('btnReload').disabled=true;
   const r=await sb.from('refresh_requests').insert({scope:'scan'}).select('id').single();
   if(r.error){ setRf('发送抓取请求失败：'+r.error.message,'bad'); $('btnReload').disabled=false; reload(); return; }
@@ -384,9 +386,9 @@ async function start(){
   if(!session){ $('loginView').style.display='block'; $('app').style.display='none'; return; }
   const r=await sb.rpc('can_view_scan');
   if(!r.data){ $('loginView').style.display='block'; $('loginErr').textContent='当前账号还没有查看权限，请联系管理员在本看板「权限」里添加你的邮箱。'; await sb.auth.signOut(); return; }
-  const adm=await sb.rpc('is_admin'); if(adm.data) $('btnPerm').style.display='';
+  const adm=await sb.rpc('is_admin'); IS_ADMIN=!!adm.data; if(IS_ADMIN) $('btnPerm').style.display=''; else $('btnReload').title='重新读取最新数据（重新抓取仅管理员可操作）';
   $('loginView').style.display='none'; $('app').style.display='block';
-  setRange(7); reload(); resumeRf();
+  setRange(7); reload(); if(IS_ADMIN) resumeRf();
 }
 start();
 </script>
