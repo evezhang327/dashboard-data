@@ -619,6 +619,13 @@ function demoData(){
 }
 
 // ---------- 数据 ----------
+function curBL(code,d,run){
+  const x=S.bl&&S.bl[code+'|'+d], first=runsOf(code,d).filter(r=>r.status==='ok').slice(-1)[0];   // 当天第一次运行的积压
+  const cur=(x && (!run || new Date(x.updated_at) >= new Date(run.run_at+(String(run.run_at).match(/Z|[+-]\d\d:?\d\d$/)?'':'Z'))))
+    ? {n:x.backlog||0, detail:x.backlog_detail||{}, at:x.local_time} : {n:run?run.backlog||0:0, detail:run?run.backlog_detail||{}:{}, at:run?localTime(run):''};
+  cur.first=first?first.backlog||0:cur.n; cur.firstAt=first?localTime(first):'';
+  return cur;
+}
 async function loadLive(){
   const from=addDays(todayPT(),-30);
   const [w,r,a]=await Promise.all([
@@ -629,6 +636,8 @@ async function loadLive(){
   for(const x of [w,r,a]) if(x.error) throw x.error;
   if(w.data.length) S.warehouses=w.data.filter(x=>!EXCLUDED.has(x.code) && x.forecast_enabled!==false);
   S.runs=r.data; S.actual=a.data; S.lines={};
+  // 积压实时值：Mac 每小时刷新一次（daily_backlog），每次预测运行也会写；看板取最新一次
+  S.bl={}; try{ const b=await sb.from('daily_backlog').select('*').gte('date',from).limit(5000); if(!b.error) b.data.forEach(x=>S.bl[x.warehouse+'|'+x.date]=x); }catch(e){}
   // 大促周末（11/20–12/4 的周六、周日）没有截单：改用下单时间口径（前一天当地 15:00 ~ 当天 15:00）
   try{
     const isPW=d=>{ const w=new Date(d+'T12:00:00Z').getUTCDay(); return (w===0||w===6) && d>='2026-11-20' && d<='2026-12-04'; };
@@ -683,9 +692,11 @@ async function renderView(){
   const need=a=>a? a.due-a.pre_done : null;
   const actFinal=act.some(a=>a.final);
   // hero
-  const bl=run.backlog||0, db=run.done_before||0;
+  const B=curBL(w.code,d,run), bl=B.n, db=run.done_before||0;
+  const blDone=Math.max(0,B.first-bl), blMore=B.first!==bl?`；当天最早 ${B.firstAt} 是 ${fmt(B.first)} 单${blDone?`，之后已做 ${fmt(blDone)} 单`:''}`:'';
   let alerts='';
-  if(bl) alerts+=`<div class="alert">⚠️ 当前积压：${fmt(bl)} 单以前截单、至今未做${Object.keys(run.backlog_detail||{}).length?'（'+Object.entries(run.backlog_detail).sort().map(([k,v])=>`${md(k)}截单 ${v}`).join('、')+'）':''}</div>`;
+  if(bl) alerts+=`<div class="alert">⚠️ 当前积压：${fmt(bl)} 单以前截单、至今未做${Object.keys(B.detail).length?'（'+Object.entries(B.detail).sort().map(([k,v])=>`${md(k)}截单 ${v}`).join('、')+'）':''}<span class="hint" style="margin-left:6px">截至当地 ${esc(B.at||'')} 更新${blMore}</span></div>`;
+  else if(B.first) alerts+=`<div class="alert info">✅ 积压已清：当天最早 ${B.firstAt} 有 ${fmt(B.first)} 单积压，截至当地 ${esc(B.at||'')} 已全部做完</div>`;
   if(db) alerts+=`<div class="alert info">今日截单中已有 ${fmt(db)} 单提前做完，不计入今日预报</div>`;
   if(errs.length && errs[0].run_at>run.run_at) alerts+=`<div class="alert bad">最近一次运行失败（${localTime(errs[0])}）：${esc(errs[0].error)}</div>`;
   const oth=run.other_carriers||{}; if(Object.keys(oth).length) alerts+=`<div class="alert info">归到「其他」的承运商：${Object.entries(oth).slice(0,8).map(([k,v])=>`${esc(k)} ${v}`).join('、')}（可在 LAX2 config 的服务商分组里补上）</div>`;
@@ -774,9 +785,9 @@ async function renderAll(){
     const nD=[...new Set(S.actual.filter(a=>a.warehouse===w.code&&a.date>d).map(a=>a.date))].sort()[0];   // 这个仓的下一个截单日（周末无截单的仓会是周一）
     const np=nD?actualOf(w.code,nD).reduce((s,a)=>s+(a.pre_done||0),0):0;        // 下一截单日的货，今晚已提前做完
     T.pre+=pre; T.np+=np;
-    T.e+=m0?m0.total_est:0;T.a+=run.total_arrived;T.g+=run.gaylord;T.p+=run.pallets;T.v+=run.trucks;T.bl+=run.backlog||0; if(act.length){T.need+=need;T.done+=done;T.cd=(T.cd||0)+cd;T.cdue=(T.cdue||0)+cdue;T.me+=mrun?mrun.total_est:run.total_est;T.has++;}
+    T.e+=m0?m0.total_est:0;T.a+=run.total_arrived;T.g+=run.gaylord;T.p+=run.pallets;T.v+=run.trucks;const B=curBL(w.code,d,run); T.bl+=B.n; if(act.length){T.need+=need;T.done+=done;T.cd=(T.cd||0)+cd;T.cdue=(T.cdue||0)+cdue;T.me+=mrun?mrun.total_est:run.total_est;T.has++;}
     return `<tr><td><span class="wh-link" data-wh="${w.code}">${esc(w.code)}</span><div class="hint">${esc(w.wms_code||'')} · ${esc(w.name)}</div></td><td>${({evening:'傍晚',manual:'',morning:'早上'}[run.run_type] ?? '早上')} ${localTime(run)}${err&&err.run_at>run.run_at?' <span class="tag bad">最近失败</span>':''}</td>
-      <td class="num"><b>${m0?fmt(m0.total_est):'—'}</b></td><td class="num">${fmt(run.total_arrived)}</td><td class="num">${fmt(run.gaylord)}</td><td class="num">${fmt(run.pallets)}</td><td class="num">${fmt(run.trucks)}</td><td class="num">${run.backlog?`<span style="color:var(--bad)">${fmt(run.backlog)}</span>`:'0'}</td>
+      <td class="num"><b>${m0?fmt(m0.total_est):'—'}</b></td><td class="num">${fmt(run.total_arrived)}</td><td class="num">${fmt(run.gaylord)}</td><td class="num">${fmt(run.pallets)}</td><td class="num">${fmt(run.trucks)}</td><td class="num" title="截至当地 ${esc(B.at||'')}${B.first!==B.n?'；当天最早 '+fmt(B.first):''}">${B.n?`<span style="color:var(--bad)">${fmt(B.n)}</span>`:'0'}${B.first>B.n?`<div class="hint">已做 ${fmt(B.first-B.n)}</div>`:''}</td>
       <td class="num">${fmt(pre)}${np?`<div class="hint">${md(nD)} 的货已做 ${fmt(np)}</div>`:''}</td>
       <td class="num bl">${act.length?fmt(need):'—'}</td><td class="num">${act.length?rateTag(cd,cdue):'—'}</td><td class="num">${act.length?errTag(mrun?mrun.total_est:run.total_est,need):'—'}</td></tr>`;}).join('');
   // 全美按服务商
@@ -817,6 +828,7 @@ async function start(){
   try{ await loadLive(); }catch(e){ $('banner').innerHTML=`<div class="banner">加载失败：${esc(e.message)}</div>`; }
   render();
   sb.channel('dfr').on('postgres_changes',{event:'INSERT',schema:'public',table:'daily_forecast_runs'},async()=>{ try{ await loadLive(); render(); }catch(e){} }).subscribe();
+  sb.channel('dbl').on('postgres_changes',{event:'*',schema:'public',table:'daily_backlog'},p=>{ try{ const x=p.new; if(x&&x.warehouse){ S.bl[x.warehouse+'|'+x.date]=x; render(); } }catch(e){} }).subscribe();
 }
 $('loginForm').onsubmit=async e=>{e.preventDefault(); const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pwd').value}); if(error){$('loginErr').textContent='登录失败：'+error.message;return;} $('loginView').style.display='none'; start();};
 $('btnLogout').onclick=async()=>{await sb.auth.signOut(); location.reload();};
