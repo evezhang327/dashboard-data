@@ -234,7 +234,7 @@ function renderMatrix(){
 }
 
 // ---------- 异常明细
-const TYPES=[['all','全部异常'],['noho_b','截单前未交接'],['wknd','周末单未交接'],['a48','24–48h 上网'],['a96','48–96h 上网'],['over','超 96h 上网'],['none','未上网 >24h'],['none48','未上网 >48h'],['none96','未上网 >96h'],['nonet','交接后未上网（含 24h 内）'],['dlvna','无揽收记录直接妥投'],['dlate','妥投晚到 / 过期'],['tail','尾单未妥投'],['fake','虚假交接'],['gmis','GOFO 不一致']];
+const TYPES=[['all','全部异常'],['noho_b','截单前未交接'],['wknd','周末单未交接'],['a48','24–48h 上网'],['a96','48–96h 上网'],['over','超 96h 上网'],['none96','未上网 >96h'],['nonet','交接后未上网（含 24h 内）'],['dlvna','无揽收记录直接妥投'],['dlate','妥投晚到 / 过期'],['tail','尾单未妥投'],['fake','虚假交接'],['gmis','GOFO 不一致']];
 function detQuery(count){
   const d=S.det;
   let q=sb.from('scan_pkg').select(count?'pkg':'*',count?{count:'exact',head:true}:undefined).gte('pack_date',S.f.from).lte('pack_date',S.f.to);
