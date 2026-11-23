@@ -105,6 +105,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .matrix td.wh{min-width:170px;background:#fff;position:sticky;left:0;z-index:1}
 .matrix th.wh{position:sticky;left:0;z-index:2}
 .cell{border-radius:10px;padding:6px 8px;line-height:1.35}
+#matrix .cell[title]{cursor:pointer}#matrix .cell[title]:hover{box-shadow:0 0 0 2px var(--ink3)}
 .cell .u{font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
 .cell .o{font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
 .cell .s{font-size:11px;font-weight:600;margin-top:2px}
@@ -304,7 +305,7 @@ body.daily .chip.on{background:#e8effd;border-color:#b6ccf8;color:#1D4ED8}
   <section class="grid2">
     <div class="card panel">
       <div class="ph">
-        <h2>到车明细</h2>
+        <h2>到车明细</h2><span id="detFocus"></span>
         <input class="search" id="q" placeholder="搜索 trailer / 仓库 / 服务商 / 填报人">
       </div>
       <div class="tbl-wrap" style="max-height:460px"><table id="detail"></table></div>
@@ -1104,6 +1105,7 @@ function renderMatrix(){
   // 当天实时：默认今天；选了日期就看那天；大促前显示首日（11/20），结束后显示最后一天
   const today=refToday();
   const day = S.f.date || (DATES.includes(today) ? today : (today < DATES[0] ? DATES[0] : DATES[DATES.length-1]));
+  S._mxDay=day;
   const future = day > today;
   const useDates=[day];
   $('matrixTitle').textContent = `仓库 × 服务商 · ${md(day)} 周${wd(day)} ` + (future ? '（尚未开始，显示当天预测）' : day===today ? '今日实时' : '当日');
@@ -1167,13 +1169,16 @@ function timeLocal(r){
 }
 function renderDetail(){
   const q=S.f.q.trim().toLowerCase();
-  let rows=S.pickups.filter(r=>datesInScope().includes(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse));
+  const F=S.focus;   // 从「仓库 × 服务商」格子点过来：只看那一格（仓库 + 服务商 + 当天）
+  let rows=F ? S.pickups.filter(r=>r.warehouse===F.wh&&r.carrier===F.c&&r.date===F.d)
+             : S.pickups.filter(r=>datesInScope().includes(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse));
+  $('detFocus').innerHTML = F ? `<span class="chip on" id="focusChip" style="margin-left:8px;cursor:pointer" title="点击清除，回到全部明细">${esc(F.wh)} · ${esc(F.c)} · ${md(F.d)}　✕</span>` : '';
   if(q) rows=rows.filter(r=>[r.trailer_no,r.warehouse,r.carrier,r.reporter,r.note,r.exception_type,whOf(r.warehouse).name].join(' ').toLowerCase().includes(q));
   rows.sort((a,b)=> (b.date+b.arrived_at).localeCompare(a.date+a.arrived_at));
   const shown=rows.slice(0,500);
   $('detail').innerHTML = rows.length ? `<thead><tr><th>日期</th><th>到达</th><th>仓库</th><th>服务商</th><th>Trailer</th><th class="num">单量</th><th class="num">板数</th><th>异常</th><th>填报人</th><th>照片</th>${S.admin?'<th></th>':''}</tr></thead><tbody>`+
     shown.map(r=>`<tr class="${r.voided?'void':''}"><td>${md(r.date)}</td><td>${timeLocal(r)}</td><td>${esc(r.warehouse)}</td><td>${esc(r.carrier)}</td><td><b>${esc(r.trailer_no)}</b></td><td class="num">${fmt(r.orders)}</td><td class="num">${r.pallets==null?'—':fmt(r.pallets)}</td><td>${r.exception_type?`<span class="tag bad">${esc(r.exception_type)}</span>${r.note?`<div style="font-size:12px;color:var(--ink2);margin-top:2px">${esc(r.note)}</div>`:''}`:''}</td><td>${esc(r.reporter)}</td><td><div class="thumbs">${(r.photo_paths||[]).length?((S.admin||!LIVE)?(r.photo_paths||[]).map((p,i)=>`<button data-photo="${esc(p)}">图${i+1}</button>`).join(''):`<span style="color:var(--ink2)">${r.photo_paths.length} 张</span>`):'<span style="color:var(--ink3)">—</span>'}</div>${r.voided&&r.void_reason?`<div style="font-size:12px;color:var(--ink3)">作废：${esc(r.void_reason)}</div>`:''}</td>${S.admin?`<td style="white-space:nowrap"><button class="btn sm" data-edit="${r.id}">修改</button> <button class="btn sm" data-del="${r.id}" style="color:var(--bad)">删除</button></td>`:''}</tr>`).join('')+'</tbody>'
-    : `<tbody><tr><td class="empty">${LIVE?'当前筛选下还没有到车记录':'演示模式：部署后，仓库通过填报小程序提交的到车记录会实时出现在这里'}</td></tr></tbody>`;
+    : `<tbody><tr><td class="empty">${F?(isHo(F.wh,F.c)?'这一格是容器交接（iWMS 自动取数），没有人工填报的到车记录':'这一格当天还没有到车填报记录'):LIVE?'当前筛选下还没有到车记录':'演示模式：部署后，仓库通过填报小程序提交的到车记录会实时出现在这里'}</td></tr></tbody>`;
   if(rows.length>500) $('detail').insertAdjacentHTML('beforeend',`<tfoot><tr><td colspan="11" class="hint">仅显示最近 500 条，共 ${rows.length} 条；可导出 CSV 查看全部</td></tr></tfoot>`);
 }
 
@@ -1277,7 +1282,7 @@ function renderDailyCharts(){
   barChart($('chartTrucks'), st, {unit:'车', label:'近 14 天预派车与登记实际到车', h:250, daily:true, acLabel:'登记实际到车'});
 }
 function renderDailyMatrix(){
-  const day=S.dDate||refToday(), today=refToday();
+  const day=S.dDate||refToday(), today=refToday(); S._mxDay=day;
   $('matrixTitle').textContent = `仓库 × 服务商 · ${md(day)} 周${wd(day)} ${day===today?'今日实时':'当日'} · 登记实际到车 / 预派车`;
   const carriers=CARRIER_ORDER.filter(c=>S.f.carriers.has(c));
   const L=dLines(day), pk=pkRows([day]);
@@ -1357,6 +1362,14 @@ $('fDate').onchange=e=>{ if(S.mode==='daily') S.dDate=e.target.value||refToday()
 $('btnMode').onchange=e=>{ S.mode = e.target.checked?'peak':'daily'; S.dDate=refToday(); renderAll(); };
 $('fWh').onchange=e=>{S.f.wh=e.target.value; renderAll();};
 $('q').oninput=e=>{S.f.q=e.target.value; renderDetail();};
+// 点「仓库 × 服务商」的格子 → 下方到车明细只显示这一格的填报记录，并滚动过去
+$('matrix').addEventListener('click',e=>{
+  const cell=e.target.closest('.cell'); if(!cell||!cell.title) return;
+  const [wh,c]=cell.title.split(' · '); if(!wh||!c) return;
+  S.focus={wh:wh.trim(), c:c.trim(), d:S._mxDay||refToday()};
+  renderDetail(); $('detail').closest('.card').scrollIntoView({behavior:'smooth',block:'start'});
+});
+document.addEventListener('click',e=>{ if(e.target.closest('#focusChip')){ S.focus=null; renderDetail(); } });
 $('btnReset').onclick=()=>{S.f={date:'',carriers:new Set(CARRIER_ORDER),wh:'ALL',region:'ALL',q:''}; $('q').value=''; renderAll();};
 // 管理员点「刷新」：写一条 refresh_requests，Mac 上的 refresh_watch.py 每分钟检查一次，看到后马上跑一遍全美明细
 let rfTimer=null;
