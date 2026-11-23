@@ -269,13 +269,15 @@ function renderDetail(){
     d.rows.map(r=>`<tr><td>${md(r.pack_date)}</td><td>${esc(whn(r.wh))}</td><td>${esc(r.carrier)}</td><td>${excTags(r).map(x=>`<span class="tag ${x[1]}">${esc(x[0])}</span>`).join('')}</td><td><b>${esc(r.pkg)}</b></td><td>${esc(r.so||'')}</td><td title="${esc(r.spb_name||'')}">${esc(r.spb||'')}</td><td>${tm(r.w_cutoff||r.i_cutoff)}</td><td>${tm(r.w_pack||r.i_pack)}</td><td>${tm(r.w_ho||r.i_ho)}</td><td>${tm(r.i_asc)}</td><td>${tm(r.g_asc)}</td><td class="num">${r.a_hours==null?'':r.a_hours}</td><td>${tm(r.i_plan)}</td><td>${tm(r.i_dlv||r.g_dlv)}</td></tr>`).join('')+'</tbody></table>';
   $('btnMore').style.display=d.rows.length<d.total?'':'none';
 }
-async function loadDetail(reset){
+async function loadDetail(reset,_retry){
   const d=S.det; if(reset){ d.rows=[]; d.off=0; }
   try{
     if(reset){ const {count,error}=await detQuery(true); if(error) throw error; d.total=count||0; }
     const {data,error}=await detQuery(false).order('pack_date',{ascending:false}).order('wh').order('pkg').range(d.off,d.off+199);
     if(error) throw error; d.rows=d.rows.concat(data||[]); d.off+=200;
-  }catch(e){ $('detTbl').innerHTML=`<div class="empty">加载失败：${esc(e.message)}</div>`; return; }
+  }catch(e){
+    if(!_retry){ setTimeout(()=>loadDetail(reset,true),3000); $('detTbl').innerHTML='<div class="empty">加载中…</div>'; return; }   // 每晚 21:00 数据更新时可能短暂超时，自动重试一次
+    $('detTbl').innerHTML=`<div class="empty">加载失败：${esc(e.message||e.details||e.code||'数据正在更新，请稍后点「刷新」')}</div>`; return; }
   renderDetail();
 }
 async function exportCsv(){
