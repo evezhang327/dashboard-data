@@ -112,8 +112,10 @@ h1::before{display:none!important}
 </style>
 </head>
 <body>
-<div id="loginView" class="card login" style="display:none">
-  <h2 style="margin:0 0 4px">日均预测</h2><div class="sub">请使用看板账号登录</div>
+<div id="loginView" class="card login" style="display:none;text-align:center">
+  <nav class="nav" style="margin:0 auto 14px;font-size:13px"><a href="index.html">提货看板</a><a href="daily.html" class="on">日均预测</a><a href="scan.html">揽收妥投达成</a></nav>
+  <div style="font-size:36px;line-height:1">🔒</div>
+  <h2 style="margin:10px 0 4px">无权限访问</h2><div class="sub">「日均预测」看板仅管理员和已授权账号可查看，请登录</div>
   <form id="loginForm"><input id="email" type="email" placeholder="邮箱" required><input id="pwd" type="password" placeholder="密码" required>
   <div id="loginErr" style="color:var(--bad);font-size:13px;min-height:20px;margin-top:8px"></div>
   <button class="btn" style="width:100%;background:var(--ink);color:#fff;padding:10px" type="submit">登录</button></form>
@@ -824,13 +826,17 @@ async function start(){
   renderBanner();
   if(!LIVE){ Object.assign(S, demoData()); $('app').style.display='block'; return render(); }
   const {data:{session}}=await sb.auth.getSession();
-  $('app').style.display='block'; if(session) $('btnLogout').style.display='';
+  // 仅管理员和已授权账号（与「揽收妥投达成」共用同一份授权名单）可查看
+  if(!session){ $('loginView').style.display='block'; $('app').style.display='none'; return; }
+  const ok=await sb.rpc('can_view_scan');
+  if(!ok.data){ $('loginView').style.display='block'; $('app').style.display='none'; $('loginErr').textContent='当前账号还没有查看权限，请联系管理员在「揽收妥投达成」看板的「权限」里添加你的邮箱。'; await sb.auth.signOut(); return; }
+  $('loginView').style.display='none'; $('app').style.display='block'; $('btnLogout').style.display='';
   try{ await loadLive(); }catch(e){ $('banner').innerHTML=`<div class="banner">加载失败：${esc(e.message)}</div>`; }
   render();
   sb.channel('dfr').on('postgres_changes',{event:'INSERT',schema:'public',table:'daily_forecast_runs'},async()=>{ try{ await loadLive(); render(); }catch(e){} }).subscribe();
   sb.channel('dbl').on('postgres_changes',{event:'*',schema:'public',table:'daily_backlog'},p=>{ try{ const x=p.new; if(x&&x.warehouse){ S.bl[x.warehouse+'|'+x.date]=x; render(); } }catch(e){} }).subscribe();
 }
-$('loginForm').onsubmit=async e=>{e.preventDefault(); const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pwd').value}); if(error){$('loginErr').textContent='登录失败：'+error.message;return;} $('loginView').style.display='none'; start();};
+$('loginForm').onsubmit=async e=>{e.preventDefault(); const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pwd').value}); if(error){$('loginErr').textContent='登录失败：'+error.message;return;} start();};
 $('btnLogout').onclick=async()=>{await sb.auth.signOut(); location.reload();};
 start();
 </script>
