@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>/* 手机排错：脚本出错时在页面底部显示原因（ES5，旧浏览器也能跑） */(function(){function show(m){try{var d=document.getElementById('jsErr');if(!d){d=document.createElement('div');d.id='jsErr';d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#b91c1c;color:#fff;font:12px/1.4 -apple-system,sans-serif;padding:8px 10px;word-break:break-all';(document.body||document.documentElement).appendChild(d);}d.textContent='页面出错，请截图发给管理员：'+m+' | '+navigator.userAgent;}catch(e){}}window.addEventListener('error',function(e){var t=e.target||{};if(String(e.filename||'').indexOf('/supabase.js')>-1)return;show(t.src?('资源加载失败 '+t.src):((e.message||'error')+(e.filename?' @'+String(e.filename).split('/').pop()+':'+e.lineno:'')));},true);window.addEventListener('unhandledrejection',function(e){var r=e.reason;show('Promise: '+(r&&r.message||r));});})();</script>
+<title>揽收 / 妥投达成 · Ascan & Dscan</title>
+<script src="config.js" onerror="void 0"></script>
+<script src="supabase.js"></script>
+<script>window.supabase||document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>')</script>
+<style>
+:root{--bg:#f5f5f6;--card:#fff;--line:#e7e8ec;--line2:#f0f1f4;--ink:#0f172a;--ink2:#4b5563;--ink3:#94a3b8;--red:#E1251B;--good:#0a7a0a;--good-bg:#e9f7e9;--warn:#946200;--warn-bg:#fdf4e1;--bad:#c62828;--bad-bg:#fbeaea;--muted:#f1f3f6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1320px;margin:0 auto;padding:22px 28px 60px}
+.nav{display:flex;gap:22px;border-bottom:1px solid #e5e7eb;margin-bottom:20px;overflow-x:auto}
+.nav a{padding:10px 2px;text-decoration:none;color:#6b7280;font-weight:600;font-size:15px;white-space:nowrap}
+.nav a.on{color:var(--red);border-bottom:3px solid var(--red);margin-bottom:-1px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:26px;line-height:1.2;margin:0}
+h1::before{content:"";display:inline-block;width:6px;height:24px;background:var(--red);border-radius:3px;margin-right:10px;vertical-align:-3px}
+.sub{color:#6b7280;margin-top:6px;font-size:14px}
+.btn{border:1px solid #e5e7eb;background:#fff;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:13px;color:var(--ink);text-decoration:none}
+.btn.sm{padding:4px 10px;font-size:12px;border-radius:8px}
+.btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.card{background:#fff;border-radius:14px;box-shadow:0 1px 2px #0000000d,0 1px 8px #0000000a}
+.filters{padding:14px 18px;display:flex;gap:12px 18px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+.filters label{display:block;font-size:12px;color:var(--ink2);margin-bottom:6px;font-weight:600}
+.filters select,.filters input{padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:130px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:7px 12px;cursor:pointer;font-size:13px;color:var(--ink2)}
+.seg button.on{background:var(--red);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:12px;margin-bottom:16px}
+.kpi{padding:14px 16px}
+.kpi small{display:block;color:#6b7280;font-size:12px}
+.kpi b{display:block;font-size:24px;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi i{font-style:normal;color:var(--ink3);font-size:12px}
+.kpi.red b{color:var(--red)}
+.panel{padding:18px 20px;margin-bottom:16px}
+.panel h2{font-size:15px;margin:0}
+.ph{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.hint{color:var(--ink3);font-size:12px}
+.tbl-wrap{overflow:auto;border:1px solid #eeeeef;border-radius:12px;max-height:70vh}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:600;color:#6b7280;text-align:left;font-size:12px;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:#fafafa;position:sticky;top:0;z-index:1}
+th.grp{text-align:center;border-left:1px solid var(--line);background:#f4f6f9;top:0}
+tr.h2 th{top:33px}
+td{padding:7px 10px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.bl,th.bl{border-left:1px solid var(--line)}
+tr.total td{font-weight:700;background:#fafafa}
+tr.click{cursor:pointer} tr.click:hover td{background:#fff7f6}
+.r-good{color:var(--good);font-weight:600}.r-warn{color:var(--warn);font-weight:600}.r-bad{color:var(--bad);font-weight:700}
+.mx td.cell{text-align:center;cursor:pointer;min-width:74px}
+.mx td.cell b{display:block;font-size:13px}
+.mx td.cell small{color:var(--ink3);font-size:11px}
+.mx td.c-good{background:#eef8ee}.mx td.c-ok{background:#fff}.mx td.c-warn{background:#fdf6e6}.mx td.c-bad{background:#fbe9e9}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11.5px;font-weight:600;background:var(--muted);color:var(--ink2);margin-right:3px}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}.tag.warn{background:var(--warn-bg);color:var(--warn)}.tag.info{background:#eef2ff;color:#3949ab}
+.banner{padding:10px 14px;border-radius:12px;background:#fff6f5;color:#8a1c14;border:1px solid #fbd5d1;margin-bottom:14px;font-size:13px}
+.banner.info{background:#eef2f7;color:var(--ink2);border-color:#e1e6ee}
+.empty{color:var(--ink3);text-align:center;padding:26px 10px;font-size:13px}
+.login{max-width:380px;margin:12vh auto;padding:28px}
+.login input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-top:10px}
+.foot{color:var(--ink3);font-size:12px;margin-top:10px;line-height:1.8}
+.bar{display:flex;height:8px;border-radius:4px;overflow:hidden;min-width:90px;background:#f1f3f6}
+.bar i{display:block;height:100%}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--ink2)}
+.chips button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chips button em{font-style:normal;opacity:.7;margin-left:4px}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:640px){.wrap{padding:16px 12px 40px}h1{font-size:22px}.kpis{grid-template-columns:repeat(2,1fr)}.kpi b{font-size:20px}.filters select,.filters input{min-width:0;width:100%}.filters>div{flex:1 1 45%}}
+</style>
+</head>
+<body>
+<div id="loginView" class="card login" style="display:none">
+  <h2 style="margin:0 0 4px">揽收 / 妥投达成</h2><div class="sub">仅管理员可见，请使用管理员账号登录</div>
+  <form id="loginForm"><input id="email" type="email" placeholder="邮箱" required><input id="pwd" type="password" placeholder="密码" required>
+  <div id="loginErr" style="color:var(--bad);font-size:13px;min-height:20px;margin-top:8px"></div>
+  <button class="btn" style="width:100%;background:var(--ink);color:#fff;padding:10px" type="submit">登录</button></form>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+  <nav class="nav"><a href="index.html">提货看板</a><a href="daily.html">日均预测</a><a href="scan.html" class="on">揽收妥投达成</a></nav>
+  <header class="top">
+    <div>
+      <h1>Ascan / Dscan 达成</h1>
+      <div class="sub">按 WMS 打包日统计 · 仓发 CC · 小件（已剔除大件、BC、客户自提） · 按包裹计 · 每晚 21:00 更新</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="hint" id="runInfo"></span>
+      <button class="btn" id="btnReload">刷新</button>
+      <button class="btn" id="btnLogout">退出</button>
+    </div>
+  </header>
+  <div id="banner"></div>
+  <section class="card filters">
+    <div><label>打包日 从</label><input type="date" id="fFrom"></div>
+    <div><label>到</label><input type="date" id="fTo"></div>
+    <div><label>仓库</label><select id="fWh"></select></div>
+    <div><label>服务商</label><select id="fCar"></select></div>
+    <div><label>快捷</label><div class="seg" id="quick"><button data-q="1">昨天</button><button data-q="7">近 7 天</button><button data-q="14">近 14 天</button><button data-q="30">近 30 天</button></div></div>
+  </section>
+  <div class="kpis" id="kpis"></div>
+  <section class="card panel">
+    <div class="ph"><h2>达成明细</h2><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="hint">点任一行看该行的异常包裹</span><div class="seg" id="dimSeg"><button data-d="carrier" class="on">按服务商</button><button data-d="wh">按仓库</button><button data-d="date">按打包日</button></div></div></div>
+    <div class="tbl-wrap" id="sumTbl"></div>
+  </section>
+  <section class="card panel">
+    <div class="ph"><h2>仓库 × 服务商</h2><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="hint">点格子看异常包裹</span><div class="seg" id="mxSeg"><button data-m="a24" class="on">24hr</button><button data-m="a96">96hr</button><button data-m="fake">虚假交接率</button><button data-m="don">Dscan 准时率</button><button data-m="tail">妥投完成率</button></div></div></div>
+    <div class="tbl-wrap mx" id="mxTbl"></div>
+  </section>
+  <section class="card panel" id="detailPanel">
+    <div class="ph"><h2>异常明细 <span class="hint" id="detCount"></span></h2><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="fPkg" placeholder="搜包裹 / 出库单 / JDW" style="padding:6px 10px;border:1px solid var(--line);border-radius:10px;width:200px"><button class="btn primary" id="btnExport">导出 Excel</button></div></div>
+    <div class="chips" id="typeChips" style="margin-bottom:10px"></div>
+    <div class="hint" id="detScope" style="margin-bottom:8px"></div>
+    <div class="tbl-wrap" id="detTbl"></div>
+    <div style="text-align:center;margin-top:10px"><button class="btn sm" id="btnMore" style="display:none">加载更多</button></div>
+  </section>
+  <div class="foot">
+    口径：Ascan 从交接时间起算；揽收早于交接、或交接当天揽收，均计 24hr 达成（揽收早于交接的另计「虚假交接」）。达成率分母只算已满对应时长或已揽收的包裹，「待揽收」为交接未满 24 小时。<br>
+    Dscan：实际妥投日期 ≤ ISC 计划妥投日期为准时，晚到按自然日（CD）计；妥投完成率 = 计划妥投日 + 14 天（ISC 目标DSCAN尾单日期）已过的包裹中已妥投占比。妥投时效 = 交接日到妥投日的自然日。<br>
+    数据：WMS（打包/交接/截单）、ISC（揽收/妥投）、GOFO DMS（GOFO 真实轨迹，与 ISC 相差超过 1 小时标「GOFO 不一致」，取两者更早的时间）。未交接分截单前（异常）与截单后（还没到交接时间）。
+  </div>
+</div>
+
+<script>
+const CFG=window.APP_CONFIG||{};
+const sb=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>(n||0).toLocaleString('en-US');
+const pct=(a,b)=>b?(100*a/b):null;
+const pf=v=>v==null?'—':(v>=99.95&&v<100?'99.9':v.toFixed(1))+'%';
+const CAR_ORDER=['FedEx','UPS','USPS','GOFO','SpeedX','UniUni','DHL eCom','OSM','VEHO','SwiftX','Shokz UPS','Shokz FedEx','Shokz USPS','UPS Export','DHL Export','未映射'];
+const WH_NAME={'ONT-SM-2-US':'LAX2 · ONT-SM-2','LAX-LG-1-US':'LAX1 · LAX-LG-1','ONT-LG-4-US':'LAX4 · ONT-LG-4','ONT-LG-5-US':'LAX5 · ONT-LG-5','LAS-CS-1-US':'LAS1 · LAS-CS-1','EWR-LG-1-US':'NJ1 · EWR-LG-1','EWR-SM-2-US':'NJ2 · EWR-SM-2','EWR-SM-3-US':'NJ3 · EWR-SM-3','EWR-LG-5-US':'NJ5 · EWR-LG-5','ATL-SM-1-US':'ATL1 · ATL-SM-1','ATL-SM-2-US':'ATL2 · ATL-SM-2','HOU-SM-1-US':'HOU1 · HOU-SM-1'};
+const whn=w=>WH_NAME[w]||w;
+const S={rows:[],f:{from:'',to:'',wh:'ALL',car:'ALL'},dim:'carrier',mx:'a24',det:{type:'all',wh:null,car:null,date:null,q:'',rows:[],off:0,total:0}};
+const COLS='n noho_b noho_a fake a24 a48 a96 aover anone await_ den24 den48 den96 d_on d_l1 d_l2 d_l3 d_over d_tr tail_den tail_ok t3 t5 t7 t8 g_mis'.split(' ');
+
+function ptToday(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}); }
+function addDays(d,n){ const t=new Date(d+'T12:00:00Z'); t.setUTCDate(t.getUTCDate()+n); return t.toISOString().slice(0,10); }
+function md(d){ return d?d.slice(5).replace('-','/'):''; }
+function tm(s){ return s?String(s).replace('T',' ').slice(5,16):''; }
+
+async function fetchAll(q){
+  let out=[],from=0;
+  for(;;){ const {data,error}=await q().range(from,from+999); if(error) throw error; out=out.concat(data||[]); if(!data||data.length<1000) break; from+=1000; }
+  return out;
+}
+async function loadDaily(){
+  S.rows=await fetchAll(()=>sb.from('scan_daily').select('*').gte('pack_date',S.f.from).lte('pack_date',S.f.to));
+  const {data:runs}=await sb.from('scan_run').select('*').order('run_at',{ascending:false}).limit(1);
+  const r=(runs||[])[0];
+  if(r){
+    $('runInfo').textContent='最近更新 '+new Date(r.run_at).toLocaleString('zh-CN',{timeZone:'America/Los_Angeles',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' PT';
+    const d=r.detail||{}; let msg=[];
+    if(d.gofo&&d.gofo!=='ok'&&!/^ok/.test(d.gofo)) msg.push('GOFO 未核对（DMS 登录可能已过期，GOFO 暂用 ISC 数据）');
+    if(d.isc&&d.isc!=='ok') msg.push('ISC 抓取失败，本次揽收/妥投未更新');
+    if(r.note&&!msg.length&&r.status!=='ok') msg.push(r.note);
+    $('banner').innerHTML=msg.length?`<div class="banner">${esc(msg.join('；'))}</div>`:'';
+  } else { $('runInfo').textContent='还没有采集记录'; }
+}
+function filtered(){ return S.rows.filter(r=>(S.f.wh==='ALL'||r.wh===S.f.wh)&&(S.f.car==='ALL'||r.carrier===S.f.car)); }
+function agg(rows){ const a={}; COLS.forEach(c=>a[c]=0); rows.forEach(r=>COLS.forEach(c=>a[c]+=r[c]||0)); return a; }
+function rates(a){
+  const dden=a.d_on+a.d_l1+a.d_l2+a.d_l3+a.d_over, tdel=a.t3+a.t5+a.t7+a.t8;
+  return {a24:pct(a.a24,a.den24),a48:pct(a.a24+a.a48,a.den48),a96:pct(a.a24+a.a48+a.a96,a.den96),
+    fake:pct(a.fake,a.n),don:pct(a.d_on,dden),tail:pct(a.tail_ok,a.tail_den),dden,tdel,
+    t3:pct(a.t3,tdel),t5:pct(a.t5,tdel),t7:pct(a.t7,tdel),t8:pct(a.t8,tdel)};
+}
+function cls(v,kind){ if(v==null) return ''; if(kind==='fake') return v>=30?'r-bad':v>=10?'r-warn':'';
+  const g=kind==='a24'?[97,93,88]:kind==='tail'?[99,97,95]:[99,97,94]; return v>=g[0]?'r-good':v>=g[1]?'':v>=g[2]?'r-warn':'r-bad'; }
+function ccls(v,kind){ const c=cls(v,kind); return c==='r-good'?'c-good':c==='r-warn'?'c-warn':c==='r-bad'?'c-bad':'c-ok'; }
+
+function renderFilters(){
+  const whs=[...new Set(S.rows.map(r=>r.wh))].sort(), cars=[...new Set(S.rows.map(r=>r.carrier))].sort((a,b)=>(CAR_ORDER.indexOf(a)+99)%999-(CAR_ORDER.indexOf(b)+99)%999||a.localeCompare(b));
+  $('fWh').innerHTML='<option value="ALL">全部仓库</option>'+whs.map(w=>`<option value="${esc(w)}"${w===S.f.wh?' selected':''}>${esc(whn(w))}</option>`).join('');
+  $('fCar').innerHTML='<option value="ALL">全部服务商</option>'+cars.map(c=>`<option value="${esc(c)}"${c===S.f.car?' selected':''}>${esc(c)}</option>`).join('');
+}
+function renderKpis(){
+  const a=agg(filtered()), r=rates(a);
+  const k=(l,v,s,red)=>`<div class="card kpi${red?' red':''}"><small>${l}</small><b>${v}</b><i>${s||''}</i></div>`;
+  $('kpis').innerHTML=[
+    k('包裹数',fmt(a.n),`未交接 ${fmt(a.noho_b+a.noho_a)}`),
+    k('Ascan 24hr',pf(r.a24),`${fmt(a.a24)} / ${fmt(a.den24)}`,true),
+    k('Ascan 48hr',pf(r.a48),`待揽收 ${fmt(a.await_)}`),
+    k('Ascan 96hr',pf(r.a96),`>24h 未揽收 ${fmt(a.anone)}`),
+    k('虚假交接',fmt(a.fake),pf(r.fake)+' 的包裹'),
+    k('截单前未交接',fmt(a.noho_b),`截单后待交接 ${fmt(a.noho_a)}`),
+    k('Dscan 准时率',pf(r.don),`晚到 ${fmt(a.d_l1+a.d_l2+a.d_l3)} · 过期未妥投 ${fmt(a.d_over)}`,true),
+    k('妥投完成率',pf(r.tail),`尾单到期 ${fmt(a.tail_den)} · 在途 ${fmt(a.d_tr)}`)].join('');
+}
+function sumRow(label,a,attrs,total){
+  const r=rates(a);
+  const bar=r.tdel?`<div class="bar" title="≤3天 ${pf(r.t3)} · 4-5天 ${pf(r.t5)} · 6-7天 ${pf(r.t7)} · >7天 ${pf(r.t8)}"><i style="width:${r.t3}%;background:#0ca30c"></i><i style="width:${r.t5}%;background:#8bc34a"></i><i style="width:${r.t7}%;background:#f0b400"></i><i style="width:${r.t8}%;background:#e1251b"></i></div>`:'<span class="hint">—</span>';
+  return `<tr class="${total?'total':'click'}" ${attrs||''}><td>${label}</td><td class="num">${fmt(a.n)}</td>
+  <td class="num bl ${cls(r.a24,'a24')}">${pf(r.a24)}</td><td class="num ${cls(r.a48)}">${pf(r.a48)}</td><td class="num ${cls(r.a96)}">${pf(r.a96)}</td>
+  <td class="num">${fmt(a.await_)}</td><td class="num ${a.anone?'r-bad':''}">${fmt(a.anone)}</td><td class="num ${cls(r.fake,'fake')}">${fmt(a.fake)}</td><td class="num ${a.noho_b?'r-bad':''}">${fmt(a.noho_b)}</td><td class="num">${fmt(a.noho_a)}</td>
+  <td class="num bl">${fmt(a.d_on)}</td><td class="num ${a.d_l1?'r-warn':''}">${fmt(a.d_l1)}</td><td class="num ${a.d_l2?'r-warn':''}">${fmt(a.d_l2)}</td><td class="num ${a.d_l3?'r-bad':''}">${fmt(a.d_l3)}</td><td class="num ${a.d_over?'r-bad':''}">${fmt(a.d_over)}</td><td class="num">${fmt(a.d_tr)}</td><td class="num ${cls(r.don)}">${pf(r.don)}</td>
+  <td class="num bl ${cls(r.tail,'tail')}">${pf(r.tail)}</td><td class="num hint">${fmt(a.tail_ok)}/${fmt(a.tail_den)}</td>
+  <td class="bl">${bar}</td><td class="num">${pf(r.t3)}</td><td class="num">${pf(r.t5)}</td><td class="num">${pf(r.t7)}</td><td class="num">${pf(r.t8)}</td></tr>`;
+}
+function renderSummary(){
+  const rows=filtered(), key=S.dim==='carrier'?'carrier':S.dim==='wh'?'wh':'pack_date';
+  const g={}; rows.forEach(r=>(g[r[key]]=g[r[key]]||[]).push(r));
+  let keys=Object.keys(g);
+  if(S.dim==='date') keys.sort().reverse(); else keys.sort((a,b)=>agg(g[b]).n-agg(g[a]).n);
+  const head=`<thead><tr><th rowspan="2">${S.dim==='carrier'?'服务商':S.dim==='wh'?'仓库':'打包日'}</th><th rowspan="2" class="num">包裹</th><th class="grp" colspan="8">Ascan（从交接起算）</th><th class="grp" colspan="7">Dscan（对比 ISC 计划妥投）</th><th class="grp" colspan="2">妥投完成率</th><th class="grp" colspan="5">妥投时效（交接→妥投）</th></tr>
+  <tr class="h2"><th class="num bl">24hr</th><th class="num">48hr</th><th class="num">96hr</th><th class="num">待揽收</th><th class="num">&gt;24h未揽收</th><th class="num">虚假交接</th><th class="num">截单前未交接</th><th class="num">截单后待交接</th>
+  <th class="num bl">准时</th><th class="num">晚1CD</th><th class="num">晚2CD</th><th class="num">晚3+CD</th><th class="num">过期未妥投</th><th class="num">在途</th><th class="num">准时率</th>
+  <th class="num bl">完成率</th><th class="num">已妥投/到期</th><th class="bl">分布</th><th class="num">≤3天</th><th class="num">4–5天</th><th class="num">6–7天</th><th class="num">&gt;7天</th></tr></thead>`;
+  if(!keys.length){ $('sumTbl').innerHTML='<div class="empty">这个范围还没有数据</div>'; return; }
+  const body=keys.map(k=>sumRow(S.dim==='wh'?esc(whn(k)):S.dim==='date'?md(k):esc(k),agg(g[k]),`data-k="${esc(k)}"`)).join('');
+  $('sumTbl').innerHTML=`<table>${head}<tbody>${body}${sumRow('合计',agg(rows),'',true)}</tbody></table>`;
+}
+function renderMatrix(){
+  const rows=S.rows.filter(r=>S.f.car==='ALL'||r.carrier===S.f.car).filter(r=>S.f.wh==='ALL'||r.wh===S.f.wh);
+  const whs=[...new Set(rows.map(r=>r.wh))], cars=[...new Set(rows.map(r=>r.carrier))];
+  const tot=k=>agg(rows.filter(r=>r.carrier===k)).n; cars.sort((a,b)=>tot(b)-tot(a));
+  const wt=w=>agg(rows.filter(r=>r.wh===w)).n; whs.sort((a,b)=>wt(b)-wt(a));
+  if(!whs.length){ $('mxTbl').innerHTML='<div class="empty">这个范围还没有数据</div>'; return; }
+  const m=S.mx, val=a=>rates(a)[m], kind=m==='a24'?'a24':m==='fake'?'fake':m==='tail'?'tail':'x';
+  const cell=(a,w,c)=>{ if(!a.n) return '<td class="cell hint">·</td>'; const v=val(a); return `<td class="cell ${ccls(v,kind)}" data-w="${esc(w||'')}" data-c="${esc(c||'')}"><b>${pf(v)}</b><small>${fmt(a.n)}</small></td>`; };
+  let h=`<table><thead><tr><th>仓库 \\ 服务商</th>${cars.map(c=>`<th style="text-align:center">${esc(c)}</th>`).join('')}<th style="text-align:center" class="bl">合计</th></tr></thead><tbody>`;
+  whs.forEach(w=>{ h+=`<tr><td><b>${esc(whn(w))}</b></td>${cars.map(c=>cell(agg(rows.filter(r=>r.wh===w&&r.carrier===c)),w,c)).join('')}${cell(agg(rows.filter(r=>r.wh===w)),w,'')}</tr>`; });
+  h+=`<tr class="total"><td>合计</td>${cars.map(c=>cell(agg(rows.filter(r=>r.carrier===c)),'',c)).join('')}${cell(agg(rows),'','')}</tr></tbody></table>`;
+  $('mxTbl').innerHTML=h;
+}
+
+// ---------- 异常明细
+const TYPES=[['all','全部异常'],['noho_b','截单前未交接'],['fake','虚假交接'],['a48','48hr 揽收'],['a96','96hr 揽收'],['over','>96hr 揽收'],['none','>24h 未揽收'],['late','妥投晚到'],['dover','过期未妥投'],['tail','尾单未妥投'],['gmis','GOFO 不一致']];
+function detQuery(count){
+  const d=S.det;
+  let q=sb.from('scan_pkg').select(count?'pkg':'*',count?{count:'exact',head:true}:undefined).eq('abnormal',true).gte('pack_date',S.f.from).lte('pack_date',S.f.to);
+  const wh=d.wh||(S.f.wh!=='ALL'?S.f.wh:null), car=d.car||(S.f.car!=='ALL'?S.f.car:null);
+  if(wh) q=q.eq('wh',wh); if(car) q=q.eq('carrier',car); if(d.date) q=q.eq('pack_date',d.date);
+  const t=d.type;
+  if(t==='noho_b') q=q.eq('a_bucket','noho_b'); else if(t==='fake') q=q.eq('fake_ho',true);
+  else if(t==='a48') q=q.eq('a_bucket','48'); else if(t==='a96') q=q.eq('a_bucket','96'); else if(t==='over') q=q.eq('a_bucket','over'); else if(t==='none') q=q.eq('a_bucket','none');
+  else if(t==='late') q=q.eq('d_bucket','late'); else if(t==='dover') q=q.eq('d_bucket','over');
+  else if(t==='tail') q=q.eq('tail_done',true).in('d_bucket',['tr','over','noplan']); else if(t==='gmis') q=q.eq('g_mismatch',true);
+  if(d.q){ const s=d.q.replace(/[,()]/g,''); q=q.or(`pkg.ilike.%${s}%,so.ilike.%${s}%,jdw.ilike.%${s}%`); }
+  return q;
+}
+function excTags(r){
+  const t=[]; const A={'noho_b':['截单前未交接','bad'],'48':['48hr 揽收','warn'],'96':['96hr 揽收','warn'],'over':['>96hr 揽收','bad'],'none':['>24h 未揽收','bad']}[r.a_bucket];
+  if(A) t.push(A); if(r.fake_ho) t.push(['虚假交接','info']);
+  if(r.d_bucket==='late') t.push([`晚到 ${r.late_cd}CD`,r.late_cd>=3?'bad':'warn']); if(r.d_bucket==='over') t.push([`过期未妥投 ${r.late_cd}CD`,'bad']);
+  if(r.tail_done&&['tr','over','noplan'].includes(r.d_bucket)) t.push(['尾单未妥投','bad']); if(r.g_mismatch) t.push(['GOFO 不一致','info']);
+  return t;
+}
+function detRowArr(r){
+  return [r.pack_date,r.wh,r.carrier,excTags(r).map(x=>x[0]).join(' / '),r.pkg,r.so||'',r.jdw||'',r.spb||'',r.spb_name||'',
+    r.w_cutoff||r.i_cutoff||'',r.w_pack||r.i_pack||'',r.w_ho||r.i_ho||'',r.i_asc||'',r.g_asc||'',r.a_hours==null?'':r.a_hours,
+    r.i_plan||'',r.i_dlv||r.g_dlv||'',r.late_cd==null?'':r.late_cd,r.g_checked?'ISC+GOFO':'ISC'+(r.w_pack?'+WMS':'')];
+}
+const DET_HEAD=['打包日','仓库','服务商','异常类型','包裹单号','出库单号','JDW运单号','SPB','SPB名称','截单时间','打包时间','交接时间','揽收时间(ISC)','GOFO首扫','Ascan用时(h)','计划妥投','实际妥投','晚到CD','数据来源'];
+function renderDetail(){
+  const d=S.det;
+  $('typeChips').innerHTML=TYPES.map(([k,l])=>`<button data-t="${k}" class="${d.type===k?'on':''}">${l}</button>`).join('');
+  const scope=[d.date?('打包日 '+md(d.date)):'',d.wh?whn(d.wh):'',d.car||''].filter(Boolean);
+  $('detScope').innerHTML=scope.length?`已筛选：${esc(scope.join(' · '))} <button class="btn sm" id="btnClr">清除</button>`:'';
+  $('detCount').textContent=d.total!=null?`共 ${fmt(d.total)} 个包裹`:'';
+  if(!d.rows.length){ $('detTbl').innerHTML='<div class="empty">没有符合条件的异常包裹</div>'; $('btnMore').style.display='none'; return; }
+  $('detTbl').innerHTML=`<table><thead><tr>${['打包日','仓库','服务商','异常','包裹单号','出库单号','SPB','截单','打包','交接','揽收','GOFO首扫','用时h','计划妥投','实际妥投'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`+
+    d.rows.map(r=>`<tr><td>${md(r.pack_date)}</td><td>${esc(whn(r.wh))}</td><td>${esc(r.carrier)}</td><td>${excTags(r).map(x=>`<span class="tag ${x[1]}">${esc(x[0])}</span>`).join('')}</td><td><b>${esc(r.pkg)}</b></td><td>${esc(r.so||'')}</td><td title="${esc(r.spb_name||'')}">${esc(r.spb||'')}</td><td>${tm(r.w_cutoff||r.i_cutoff)}</td><td>${tm(r.w_pack||r.i_pack)}</td><td>${tm(r.w_ho||r.i_ho)}</td><td>${tm(r.i_asc)}</td><td>${tm(r.g_asc)}</td><td class="num">${r.a_hours==null?'':r.a_hours}</td><td>${tm(r.i_plan)}</td><td>${tm(r.i_dlv||r.g_dlv)}</td></tr>`).join('')+'</tbody></table>';
+  $('btnMore').style.display=d.rows.length<d.total?'':'none';
+}
+async function loadDetail(reset){
+  const d=S.det; if(reset){ d.rows=[]; d.off=0; }
+  try{
+    if(reset){ const {count,error}=await detQuery(true); if(error) throw error; d.total=count||0; }
+    const {data,error}=await detQuery(false).order('pack_date',{ascending:false}).order('wh').order('pkg').range(d.off,d.off+199);
+    if(error) throw error; d.rows=d.rows.concat(data||[]); d.off+=200;
+  }catch(e){ $('detTbl').innerHTML=`<div class="empty">加载失败：${esc(e.message)}</div>`; return; }
+  renderDetail();
+}
+async function exportCsv(){
+  const b=$('btnExport'); b.disabled=true; const old=b.textContent;
+  try{
+    let all=[],from=0;
+    for(;;){ b.textContent=`导出中… ${fmt(all.length)}`; const {data,error}=await detQuery(false).order('pack_date',{ascending:false}).order('wh').order('pkg').range(from,from+999); if(error) throw error; all=all.concat(data||[]); if(!data||data.length<1000||all.length>=100000) break; from+=1000; }
+    const q=v=>{ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+    const lines=[DET_HEAD.join(',')].concat(all.map(r=>detRowArr(r).map(q).join(',')));
+    const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+    const name=`异常明细_${S.f.from}_${S.f.to}_${(TYPES.find(t=>t[0]===S.det.type)||[])[1]||''}.csv`;
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+  }catch(e){ alert('导出失败：'+e.message); }
+  b.disabled=false; b.textContent=old;
+}
+
+function renderAll(){ renderFilters(); renderKpis(); renderSummary(); renderMatrix(); }
+async function reload(){ try{ await loadDaily(); }catch(e){ $('banner').innerHTML=`<div class="banner">加载失败：${esc(e.message)}</div>`; } renderAll(); loadDetail(true); }
+function setRange(days){ const t=ptToday(); S.f.to=days===1?addDays(t,-1):t; S.f.from=days===1?addDays(t,-1):addDays(t,-(days-1)); $('fFrom').value=S.f.from; $('fTo').value=S.f.to; document.querySelectorAll('#quick button').forEach(b=>b.classList.toggle('on',+b.dataset.q===days)); }
+
+$('fFrom').onchange=e=>{S.f.from=e.target.value; document.querySelectorAll('#quick button').forEach(b=>b.classList.remove('on')); reload();};
+$('fTo').onchange=e=>{S.f.to=e.target.value; document.querySelectorAll('#quick button').forEach(b=>b.classList.remove('on')); reload();};
+$('quick').onclick=e=>{const b=e.target.closest('button'); if(!b) return; setRange(+b.dataset.q); reload();};
+$('fWh').onchange=e=>{S.f.wh=e.target.value; renderAll(); loadDetail(true);};
+$('fCar').onchange=e=>{S.f.car=e.target.value; renderAll(); loadDetail(true);};
+$('dimSeg').onclick=e=>{const b=e.target.closest('button'); if(!b) return; S.dim=b.dataset.d; document.querySelectorAll('#dimSeg button').forEach(x=>x.classList.toggle('on',x===b)); renderSummary();};
+$('mxSeg').onclick=e=>{const b=e.target.closest('button'); if(!b) return; S.mx=b.dataset.m; document.querySelectorAll('#mxSeg button').forEach(x=>x.classList.toggle('on',x===b)); renderMatrix();};
+$('sumTbl').onclick=e=>{const tr=e.target.closest('tr[data-k]'); if(!tr) return; const k=tr.dataset.k; S.det.wh=S.dim==='wh'?k:null; S.det.car=S.dim==='carrier'?k:null; S.det.date=S.dim==='date'?k:null; loadDetail(true); $('detailPanel').scrollIntoView({behavior:'smooth'});};
+$('mxTbl').onclick=e=>{const td=e.target.closest('td[data-w]'); if(!td) return; S.det.wh=td.dataset.w||null; S.det.car=td.dataset.c||null; S.det.date=null; loadDetail(true); $('detailPanel').scrollIntoView({behavior:'smooth'});};
+$('typeChips').onclick=e=>{const b=e.target.closest('button'); if(!b) return; S.det.type=b.dataset.t; loadDetail(true);};
+$('detScope').onclick=e=>{ if(e.target.id==='btnClr'){ S.det.wh=S.det.car=S.det.date=null; loadDetail(true);} };
+$('btnMore').onclick=()=>loadDetail(false);
+let _qt; $('fPkg').oninput=e=>{clearTimeout(_qt); _qt=setTimeout(()=>{S.det.q=e.target.value.trim(); loadDetail(true);},400);};
+$('btnExport').onclick=exportCsv;
+$('btnReload').onclick=reload;
+$('btnLogout').onclick=async()=>{await sb.auth.signOut(); location.reload();};
+$('loginForm').onsubmit=async e=>{e.preventDefault(); const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pwd').value}); if(error){$('loginErr').textContent='登录失败：'+error.message;return;} start();};
+
+async function start(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ $('loginView').style.display='block'; $('app').style.display='none'; return; }
+  const r=await sb.rpc('is_admin');
+  if(!r.data){ $('loginView').style.display='block'; $('loginErr').textContent='当前账号不是管理员，不能查看这个看板。'; await sb.auth.signOut(); return; }
+  $('loginView').style.display='none'; $('app').style.display='block';
+  setRange(7); reload();
+}
+start();
+</script>
+</body>
+</html>
