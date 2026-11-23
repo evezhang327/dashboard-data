@@ -81,10 +81,10 @@ tr.click{cursor:pointer} tr.click:hover td{background:#fff7f6}
   <nav class="nav"><a href="index.html">提货看板</a><a href="daily.html">日均预测</a><a href="scan.html" class="on">揽收妥投达成</a></nav>
   <div class="card login" style="margin:8vh auto;text-align:center">
   <div style="font-size:36px;line-height:1">🔒</div>
-  <h2 style="margin:10px 0 4px">无权限访问</h2><div class="sub">「揽收 / 妥投达成」看板仅管理员可查看，请登录管理员账号</div>
+  <h2 style="margin:10px 0 4px">无权限访问</h2><div class="sub">「揽收 / 妥投达成」看板仅管理员和已授权账号可查看，请登录</div>
   <form id="loginForm"><input id="email" type="email" placeholder="邮箱" required><input id="pwd" type="password" placeholder="密码" required>
   <div id="loginErr" style="color:var(--bad);font-size:13px;min-height:20px;margin-top:8px"></div>
-  <button class="btn" style="width:100%;background:var(--ink);color:#fff;padding:10px" type="submit">登录管理员账号</button></form>
+  <button class="btn" style="width:100%;background:var(--ink);color:#fff;padding:10px" type="submit">登录</button></form>
   <div style="margin-top:12px"><a href="index.html" class="hint">← 返回提货看板</a></div>
   </div>
 </div>
@@ -99,9 +99,16 @@ tr.click{cursor:pointer} tr.click:hover td{background:#fff7f6}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span class="hint" id="runInfo"></span>
       <button class="btn" id="btnReload" title="让 Mac 重新从 WMS / ISC / GOFO 抓一遍（约 5 分钟），跑完自动更新">刷新</button>
+      <button class="btn" id="btnPerm" style="display:none" title="管理哪些账号可以查看这个看板">权限</button>
       <button class="btn" id="btnLogout">退出</button>
     </div>
   </header>
+  <div id="permPanel" class="card" style="display:none;padding:16px 18px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b>查看权限</b><span class="hint">管理员默认可看；下面的账号只能查看本看板（及点「刷新」），不能改其他页面</span></div>
+    <form id="permForm" style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap"><input id="permEmail" type="email" placeholder="对方登录邮箱" required style="flex:1;min-width:220px;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><input id="permNote" placeholder="备注（姓名/部门，可选）" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line);border-radius:10px"><button class="btn" type="submit">添加</button></form>
+    <div id="permMsg" class="hint" style="min-height:18px"></div>
+    <table class="tbl" style="width:100%"><thead><tr><th style="text-align:left">邮箱</th><th style="text-align:left">备注</th><th style="text-align:left">添加时间</th><th></th></tr></thead><tbody id="permList"></tbody></table>
+  </div>
   <div id="rfStat" class="rfstat" style="display:none"></div>
   <div id="banner"></div>
   <section class="card filters">
@@ -356,14 +363,28 @@ async function resumeRf(){
   const r=await sb.from('refresh_requests').select('id').eq('scope','scan').in('status',['pending','running']).gte('requested_at',since).order('id',{ascending:false}).limit(1);
   if(!r.error&&r.data.length){ $('btnReload').disabled=true; pollRf(r.data[0].id); }
 }
+// 权限管理（仅管理员）：scan_viewers 表
+async function loadPerm(){
+  const r=await sb.from('scan_viewers').select('*').order('added_at',{ascending:false});
+  if(r.error){ $('permMsg').textContent='读取失败：'+r.error.message; return; }
+  $('permList').innerHTML=r.data.length?r.data.map(x=>`<tr><td>${esc(x.email)}</td><td>${esc(x.note||'')}</td><td class="hint">${new Date(x.added_at).toLocaleDateString('zh-CN')}</td><td style="text-align:right"><button class="btn" data-del="${esc(x.email)}">移除</button></td></tr>`).join(''):'<tr><td colspan="4" class="hint">还没有授权账号</td></tr>';
+}
+$('btnPerm').onclick=()=>{ const p=$('permPanel'); const show=p.style.display==='none'; p.style.display=show?'':'none'; if(show) loadPerm(); };
+$('permForm').onsubmit=async e=>{ e.preventDefault(); const email=$('permEmail').value.trim().toLowerCase();
+  const r=await sb.from('scan_viewers').upsert({email, note:$('permNote').value.trim()||null});
+  $('permMsg').textContent=r.error?'添加失败：'+r.error.message:`已添加 ${email}。对方用这个邮箱登录即可查看（还没有账号的话，需要先在 Supabase → Authentication 里给他建账号）`;
+  if(!r.error){ $('permEmail').value=''; $('permNote').value=''; loadPerm(); } };
+$('permList').onclick=async e=>{ const b=e.target.closest('[data-del]'); if(!b) return; const email=b.dataset.del;
+  const r=await sb.from('scan_viewers').delete().eq('email',email); $('permMsg').textContent=r.error?'移除失败：'+r.error.message:`已移除 ${email}`; loadPerm(); };
 $('btnLogout').onclick=async()=>{await sb.auth.signOut(); location.reload();};
 $('loginForm').onsubmit=async e=>{e.preventDefault(); const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('pwd').value}); if(error){$('loginErr').textContent='登录失败：'+error.message;return;} start();};
 
 async function start(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session){ $('loginView').style.display='block'; $('app').style.display='none'; return; }
-  const r=await sb.rpc('is_admin');
-  if(!r.data){ $('loginView').style.display='block'; $('loginErr').textContent='当前账号不是管理员，没有查看权限，请换管理员账号登录。'; await sb.auth.signOut(); return; }
+  const r=await sb.rpc('can_view_scan');
+  if(!r.data){ $('loginView').style.display='block'; $('loginErr').textContent='当前账号还没有查看权限，请联系管理员在本看板「权限」里添加你的邮箱。'; await sb.auth.signOut(); return; }
+  const adm=await sb.rpc('is_admin'); if(adm.data) $('btnPerm').style.display='';
   $('loginView').style.display='none'; $('app').style.display='block';
   setRange(7); reload(); resumeRf();
 }
