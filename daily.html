@@ -526,12 +526,12 @@ const I18N = (()=>{
   function node(n){
     if(n.nodeType===3){ const v=n.nodeValue, t=tr(v); if(t!==v) n.nodeValue=t; return; }
     if(n.nodeType!==1 || n.tagName==='SCRIPT' || n.tagName==='STYLE') return;
-    for(const a of ATTRS){ const v=n.getAttribute&&n.getAttribute(a); if(v&&HAS.test(v)) n.setAttribute(a,tr(v)); }
+    for(const a of ATTRS){ const v=n.getAttribute&&n.getAttribute(a); if(v&&HAS.test(v)){ const t=tr(v); if(t!==v) n.setAttribute(a,t); } }
     if(n.tagName==='INPUT' && /^(button|submit)$/i.test(n.type) && HAS.test(n.value)) n.value=tr(n.value);
     const w=document.createTreeWalker(n, NodeFilter.SHOW_TEXT|NodeFilter.SHOW_ELEMENT);
     let c; while((c=w.nextNode())){
       if(c.nodeType===3){ const v=c.nodeValue; if(HAS.test(v)){ const t=tr(v); if(t!==v) c.nodeValue=t; } }
-      else if(c.tagName!=='SCRIPT'&&c.tagName!=='STYLE'){ for(const a of ATTRS){ const v=c.getAttribute(a); if(v&&HAS.test(v)) c.setAttribute(a,tr(v)); } }
+      else if(c.tagName!=='SCRIPT'&&c.tagName!=='STYLE'){ for(const a of ATTRS){ const v=c.getAttribute(a); if(v&&HAS.test(v)){ const t=tr(v); if(t!==v) c.setAttribute(a,t); } } }
     }
   }
   function start(){
