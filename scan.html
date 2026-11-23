@@ -146,7 +146,7 @@ const CAR_ORDER=['FedEx','UPS','USPS','GOFO','SpeedX','UniUni','DHL eCom','OSM',
 const WH_NAME={'ONT-SM-2-US':'LAX2 · ONT-SM-2','LAX-LG-1-US':'LAX1 · LAX-LG-1','ONT-LG-4-US':'LAX4 · ONT-LG-4','ONT-LG-5-US':'LAX5 · ONT-LG-5','LAS-CS-1-US':'LAS1 · LAS-CS-1','EWR-LG-1-US':'NJ1 · EWR-LG-1','EWR-SM-2-US':'NJ2 · EWR-SM-2','EWR-SM-3-US':'NJ3 · EWR-SM-3','EWR-LG-5-US':'NJ5 · EWR-LG-5','ATL-SM-1-US':'ATL1 · ATL-SM-1','ATL-SM-2-US':'ATL2 · ATL-SM-2','HOU-SM-1-US':'HOU1 · HOU-SM-1'};
 const whn=w=>WH_NAME[w]||w;
 const S={rows:[],f:{from:'',to:'',wh:'ALL',car:'ALL'},dim:'carrier',mx:'a24',det:{type:'all',wh:null,car:null,date:null,q:'',rows:[],off:0,total:0}};
-const COLS='n noho_b noho_a fake a24 a48 a96 aover anone await_ den24 den48 den96 d_on d_l1 d_l2 d_l3 d_over d_tr tail_den tail_ok t3 t5 t7 t8 g_mis da_on da_l1 da_l2 da_l3 da_over'.split(' ');
+const COLS='n noho_b noho_a fake a24 a48 a96 aover anone await_ den24 den48 den96 d_on d_l1 d_l2 d_l3 d_over d_tr tail_den tail_ok t3 t5 t7 t8 g_mis da_on da_l1 da_l2 da_l3 da_over d_early'.split(' ');
 
 function ptToday(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'}); }
 function addDays(d,n){ const t=new Date(d+'T12:00:00Z'); t.setUTCDate(t.getUTCDate()+n); return t.toISOString().slice(0,10); }
@@ -198,7 +198,7 @@ function renderKpis(){
     k('Ascan 96hr',pf(r.a96),`48–96h 上网 ${fmt(a.a96)} · 超 96h ${fmt(a.aover)}`,true),
     k('交接后未上网',fmt(a.anone),`超 48h ${fmt(Math.max(0,a.den48-a.a24-a.a48-a.a96-a.aover))} · 超 96h ${fmt(Math.max(0,a.den96-a.a24-a.a48-a.a96-a.aover))} · 24h 内 ${fmt(a.await_)}`,!!a.anone),
     k('截单前未交接',fmt(a.noho_b),`截单后待交接 ${fmt(a.noho_a)}`,!!a.noho_b),
-    `<div class="card kpi red dkpi"><small>Dscan 准时率</small><div class="dpair"><div><b>${pf(r.don)}</b><em>全部订单</em></div><div><b>${pf(r.dan)}</b><em>已上网订单</em></div></div><i title="全部订单：含从未上网、过了计划妥投日还没妥投的包裹；已上网订单：有揽收记录（含揽收延迟）的包裹">全部 ${fmt(a.d_on)}/${fmt(r.dden)} · 已上网 ${fmt(a.da_on)}/${fmt(r.daden)} · 晚 1CD ${fmt(a.d_l1)} · 2CD ${fmt(a.d_l2)} · 3+CD ${fmt(a.d_l3)} · 过期 ${fmt(a.d_over)}</i></div>`,
+    `<div class="card kpi red dkpi"><small>Dscan 准时率</small><div class="dpair"><div><b>${pf(r.don)}</b><em>全部订单</em></div><div><b>${pf(r.dan)}</b><em>已上网订单</em></div></div><i title="只统计目标妥投日已过的包裹（同 ISC）：分子=目标日当天或之前妥投，分母=全部到期包裹（到期未妥投算积压）。全部订单含从未上网的包裹；已上网订单=有揽收记录（含揽收延迟）">已到期 ${fmt(r.dden)} 个（未到期 ${fmt(a.d_tr+a.d_early)} 个暂不计） · 全部 ${fmt(a.d_on)}/${fmt(r.dden)} · 已上网 ${fmt(a.da_on)}/${fmt(r.daden)} · 晚 1CD ${fmt(a.d_l1)} · 2CD ${fmt(a.d_l2)} · 3+CD ${fmt(a.d_l3)} · 过期 ${fmt(a.d_over)}</i></div>`,
     k('妥投完成率',pf(r.tail),r.tail_den?`尾单到期 ${fmt(a.tail_den)}`:`暂无到期（在途 ${fmt(a.d_tr)}）`)].join('');
 }
 function sumRow(label,a,attrs,total){
@@ -208,7 +208,7 @@ function sumRow(label,a,attrs,total){
   return `<tr class="${total?'total':'click'}" ${attrs||''}><td>${label}</td><td class="num">${fmt(a.n)}</td>
   <td class="num bl ${cls(r.a24,'a24')}" title="已满 24h 或已上网的 ${fmt(a.den24)} 个包裹里，24h 内上网 ${fmt(a.a24)} 个；交接未满 24h 的 ${fmt(a.await_)} 个还没算进来">${pf(r.a24)}${a.await_?`<small class="hint" style="display:block;font-weight:400">待定 ${fmt(a.await_)}</small>`:''}</td><td class="num ${cls(r.a48)}">${pf(r.a48)}</td><td class="num ${cls(r.a96)}">${pf(r.a96)}</td>
   ${n(a.anone,'r-warn','none')}${n(Math.max(0,a.den48-a.a24-a.a48-a.a96-a.aover),'r-bad','none48')}${n(Math.max(0,a.den96-a.a24-a.a48-a.a96-a.aover),'r-bad','none96')}${n(a.noho_b,'r-bad','noho_b')}<td data-t="fake" class="num cl ${cls(r.fake,'fake')}" title="${fmt(a.fake)} 个">${pf(r.fake)}</td>
-  <td class="num bl ${cls(r.don)}" title="${fmt(a.d_on)} / ${fmt(r.dden)}">${pf(r.don)}</td><td class="num ${cls(r.dan)}" title="${fmt(a.da_on)} / ${fmt(r.daden)}">${pf(r.dan)}</td>${n(a.d_l1,'r-warn','l1')}${n(a.d_l2,'r-warn','l2')}${n(a.d_l3,'r-bad','l3')}${n(a.d_over,'r-bad','dover')}
+  <td class="num bl ${cls(r.don)}" title="${fmt(a.d_on)} / ${fmt(r.dden)}（只算目标妥投日已过的；未到期 ${fmt(a.d_tr+a.d_early)} 个暂不计）">${pf(r.don)}</td><td class="num ${cls(r.dan)}" title="${fmt(a.da_on)} / ${fmt(r.daden)}">${pf(r.dan)}</td>${n(a.d_l1,'r-warn','l1')}${n(a.d_l2,'r-warn','l2')}${n(a.d_l3,'r-bad','l3')}${n(a.d_over,'r-bad','dover')}
   <td class="num ${cls(r.tail,'tail')}">${pf(r.tail)}</td><td class="bl">${bar}</td></tr>`;
 }
 function renderSummary(){
