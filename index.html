@@ -1107,7 +1107,13 @@ function renderCharts(){
 
 function ruleOf(wh,c){ const R=S.rules||[]; return R.find(r=>r.warehouse===wh&&r.carrier===c) || R.find(r=>r.warehouse===wh&&r.carrier==='*') || null; }
 // iWMS 当天该仓该服务商的实际单量（今天截单的全部订单，含前一晚提前做完的）
-function iwmsOrders(wh,c,day){ const a=(S.dailyActual||[]).filter(r=>r.warehouse===wh&&r.carrier===c&&r.date===day); return a.length ? a.reduce((s,r)=>s+(r.need||0)+(r.pre||0),0) : null; }
+function iwmsOrders(wh,c,day){ const a=(S.dailyActual||[]).filter(r=>r.warehouse===wh&&r.carrier===c&&r.date===day); if(!a.length) return null;
+  const due=a.reduce((s,r)=>s+(r.need||0)+(r.pre||0),0), pk=a.reduce((s,r)=>s+(r.packed||0),0), v=due||pk;
+  return (v===0 && day>=refToday()) ? null : v; }   // 当天傍晚运行前还没有实际数，显示「—」而不是 0
+// 仓库行的标注：整仓无需填报（协同单）或部分服务商无需填报
+function ruleWhTag(wh){ const R=(S.rules||[]).filter(r=>r.warehouse===wh); if(!R.length) return '';
+  const all=R.find(r=>r.carrier==='*'); if(all) return `<span class="rule-tag" title="${esc(all.note||'')}">${esc(all.label||'')} · 无需填报</span>`;
+  const cs=R.filter(r=>r.mode!=='none').map(r=>r.carrier); return cs.length?`<span class="rule-tag" title="${esc(R.map(r=>r.carrier+'：'+(r.note||r.label)).join('；'))}">${esc(cs.join(' / '))} 无需填报</span>`:''; }
 function ruleCell(rule,wh,c,fu,fOrd,hasOrdFc,day,future){
   const unit=unitOf(c)==='pallet'?'板':'车', tag=`<span class="rule-tag">${esc(rule.label||'')}</span>`, title=`${esc(wh)} · ${c} · ${esc(rule.note||rule.label||'')}`;
   if(rule.mode==='none') return {html:`<td><div class="cell st-na" title="${title}"><div class="u">无此业务</div><div class="o">黑五预测 ${fmt(fu)} ${unit}${hasOrdFc?` · ${fmt(fOrd)} 单`:''}</div></div></td>`, ao:0};
@@ -1159,7 +1165,7 @@ function renderMatrix(){
       cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div>${palLine}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
-    h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small></div></td>${cells}<td class="num"><b>${future?'—':fmt(ao)}</b><br><span style="color:var(--ink3)">/ ${fmt(fo)}</span></td></tr>`;
+    h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}</div></td>${cells}<td class="num"><b>${future?'—':fmt(ao)}</b><br><span style="color:var(--ink3)">/ ${fmt(fo)}</span></td></tr>`;
   }
   h+='</tbody>';
   $('matrix').innerHTML = any ? h : `<tbody><tr><td class="empty">当前筛选下没有数据</td></tr></tbody>`;
@@ -1325,7 +1331,7 @@ function renderDailyMatrix(){
       cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c} · 预测 ${fmt(est)} 单 · Gaylord ${fmt(g)} · 托盘 ${fmt(pl)}"><div class="u">${fmt(p.length)} / ${fmt(pt)}</div><div class="o">${f.length?`单 ${fmt(est)} · G${fmt(g)}${pl?' 托'+fmt(pl):''}`:'无早上预测'}</div><div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
-    h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small></div></td>${cells}<td class="num"><b>${fmt(fo)}</b></td></tr>`;
+    h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}</div></td>${cells}<td class="num"><b>${fmt(fo)}</b></td></tr>`;
   }
   h+='</tbody>';
   $('matrix').innerHTML = any ? h : `<tbody><tr><td class="empty">${md(day)} 还没有早上预测，也没有到车登记</td></tr></tbody>`;
