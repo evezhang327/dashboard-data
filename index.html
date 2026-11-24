@@ -1124,9 +1124,9 @@ function ruleCell(rule,wh,c,fu,fOrd,hasOrdFc,day,future){
   if(rule.mode==='fixed'){
     const au=future?null:((io||0)>0?(rule.trucks||1):0);
     const st=future?['st-future','']:(au?(status(au,fu,false)||['st-none','']):['st-none','']);
-    return {html:`<td><div class="cell ${st[0]}" title="${title}"><div class="u">${au==null?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${ord}</div><div class="s">${tag} ${devTxt}</div></div></td>`, ao:io||0};
+    return {html:`<td><div class="cell st-na" title="${title}"><div class="u">${au==null?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${ord}</div><div class="s">${tag} ${devTxt}</div></div></td>`, ao:io||0};
   }
-  return {html:`<td><div class="cell st-auto" title="${title}"><div class="u">— / ${fmt(fu)} <span style="font-size:11px;font-weight:600;color:var(--ink3)">${unit}</span></div><div class="o">${ord}</div><div class="s">${tag} ${devTxt}</div></div></td>`, ao:io||0};
+  return {html:`<td><div class="cell st-na" title="${title}"><div class="u">— / ${fmt(fu)} <span style="font-size:11px;font-weight:600;color:var(--ink3)">${unit}</span></div><div class="o">${ord}</div><div class="s">${tag} ${devTxt}</div></div></td>`, ao:io||0};
 }
 function renderMatrix(){
   // 当天实时：默认今天；选了日期就看那天；大促前显示首日（11/20），结束后显示最后一天
