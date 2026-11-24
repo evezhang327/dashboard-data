@@ -116,6 +116,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .st-future{background:#fff;border:1px dashed var(--line)} .st-future .s{color:var(--ink3)}
 .st-extra{background:var(--blue-soft)} .st-extra .s{color:var(--blue)}
 .st-auto{background:#eef4ff}
+.st-na{background:#fff;border:1px dashed var(--line);color:var(--ink3)} .st-na .u{font-size:13px;color:var(--ink3)}
+.cell .rule-tag{display:inline-block;font-size:10px;font-weight:700;color:#6d28d9;background:#ede9fe;border-radius:4px;padding:0 5px;line-height:16px}
 .cell .ho-sub{font-size:11px;font-weight:600;color:var(--ink3)}
 .cell .ho-tag{display:inline-block;font-size:10px;font-weight:700;color:#1d4ed8;background:#dbe7ff;border-radius:4px;padding:0 5px;line-height:16px}
 .cell .ho-unb{color:#b45309;font-weight:600}
@@ -832,6 +834,8 @@ async function loadLive(){
   if(c.data.length) S.carriers = c.data;
   if(f.data.length) S.forecast = f.data.map(r=>({...r, unit: unitOf(r.carrier)}));
   S.pickups = p.data;
+  // 特殊提货规则（协同单 / 只比单量 / 固定车次 / 无此业务）：这些格子不要求现场填报
+  try{ const pr=await sb.from('pickup_rules').select('*'); S.rules = pr.error ? [] : pr.data; }catch(e){ S.rules=[]; }
   try{ const h=await sb.from('handover_daily').select('warehouse,date,carrier,trucks,containers,packages,unbound,trailers,updated_at').gte('date',loadRange()[0]).lte('date',loadRange()[1]).limit(5000); if(h.error) throw h.error; setHandover(h.data); }catch(e){ console.warn('容器交接加载失败', e); setHandover([]); }
   try{ await loadDaily(); }catch(e){ console.warn('日均预测加载失败', e); }
   S.lastLoad = new Date();
@@ -1101,6 +1105,23 @@ function renderCharts(){
   barChart($('chartTrucks'), st, {unit:'车', label:'每日到车预测与实际', h:250});
 }
 
+function ruleOf(wh,c){ const R=S.rules||[]; return R.find(r=>r.warehouse===wh&&r.carrier===c) || R.find(r=>r.warehouse===wh&&r.carrier==='*') || null; }
+// iWMS 当天该仓该服务商的实际单量（今天截单的全部订单，含前一晚提前做完的）
+function iwmsOrders(wh,c,day){ const a=(S.dailyActual||[]).filter(r=>r.warehouse===wh&&r.carrier===c&&r.date===day); return a.length ? a.reduce((s,r)=>s+(r.need||0)+(r.pre||0),0) : null; }
+function ruleCell(rule,wh,c,fu,fOrd,hasOrdFc,day,future){
+  const unit=unitOf(c)==='pallet'?'板':'车', tag=`<span class="rule-tag">${esc(rule.label||'')}</span>`, title=`${esc(wh)} · ${c} · ${esc(rule.note||rule.label||'')}`;
+  if(rule.mode==='none') return {html:`<td><div class="cell st-na" title="${title}"><div class="u">无此业务</div><div class="o">黑五预测 ${fmt(fu)} ${unit}${hasOrdFc?` · ${fmt(fOrd)} 单`:''}</div></div></td>`, ao:0};
+  const io=future?null:iwmsOrders(wh,c,day);
+  const ord=`单 ${io==null?'—':fmt(io)} / ${hasOrdFc?fmt(fOrd):'—'}`;
+  const dev=(io!=null&&hasOrdFc&&fOrd)?Math.round((io/fOrd-1)*100):null;
+  const devTxt=dev==null?'':`<span style="color:${Math.abs(dev)>20?'var(--bad)':'var(--ink3)'}">较预测 ${dev>0?'+':''}${dev}%</span>`;
+  if(rule.mode==='fixed'){
+    const au=future?null:((io||0)>0?(rule.trucks||1):0);
+    const st=future?['st-future','']:(au?(status(au,fu,false)||['st-none','']):['st-none','']);
+    return {html:`<td><div class="cell ${st[0]}" title="${title}"><div class="u">${au==null?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${ord}</div><div class="s">${tag} ${devTxt}</div></div></td>`, ao:io||0};
+  }
+  return {html:`<td><div class="cell st-auto" title="${title}"><div class="u">— / ${fmt(fu)} <span style="font-size:11px;font-weight:600;color:var(--ink3)">${unit}</span></div><div class="o">${ord}</div><div class="s">${tag} ${devTxt}</div></div></td>`, ao:io||0};
+}
 function renderMatrix(){
   // 当天实时：默认今天；选了日期就看那天；大促前显示首日（11/20），结束后显示最后一天
   const today=refToday();
@@ -1122,6 +1143,8 @@ function renderMatrix(){
       if(!hasCombo && !p.length){ cells+='<td></td>'; continue; }
       rowHas=true;
       const fu=f.reduce((s,r)=>s+(r.fc_units||0),0), fOrd=f.reduce((s,r)=>s+(r.fc_orders||0),0), hasOrdFc=f.some(r=>r.fc_orders!=null);
+      const rule=ruleOf(w.code,c);
+      if(rule && !p.length && !isHo(w.code,c)){ const rc=ruleCell(rule,w.code,c,fu,fOrd,hasOrdFc,day,future); if(rule.mode!=='none'){ fo+=fOrd; ao+=rc.ao; } cells+=rc.html; continue; }
       const ho=hoOf(w.code,c,day);
       if(ho){ fo+=fOrd; ao+=ho.packages; cells+=hoCell(w.code,c,ho,fu,fOrd,hasOrdFc,future); continue; }
       if(isHo(w.code,c) && !fu && !future){ cells+=`<td><div class="cell st-auto"><div class="u">—</div><div class="o">${hasOrdFc?'单 — / '+fmt(fOrd):'容器交接'}</div><div class="s">待容器交接</div></div></td>`; continue; }
@@ -1148,7 +1171,7 @@ function renderMissing(){
   if(!day){ $('missHint').textContent='大促窗口外'; $('missing').innerHTML=`<div class="empty">选择一个日期查看未填报的仓库与服务商</div>`; return; }
   if(day>refToday()){ $('missHint').textContent='尚未开始'; $('missing').innerHTML=`<div class="empty">${md(day)} 尚未开始</div>`; return; }
   const fc=fcRows([day]).filter(r=>r.fc_units>0), pk=pkRows([day]);
-  const miss=fc.filter(r=>!isHo(r.warehouse,r.carrier)&&!pk.some(p=>p.warehouse===r.warehouse&&p.carrier===r.carrier));
+  const miss=fc.filter(r=>!isHo(r.warehouse,r.carrier)&&!ruleOf(r.warehouse,r.carrier)&&!pk.some(p=>p.warehouse===r.warehouse&&p.carrier===r.carrier));
   $('missHint').textContent = `${miss.length} / ${fc.length} 项未填`;
   $('missing').innerHTML = miss.length ? miss.sort((a,b)=>a.warehouse.localeCompare(b.warehouse)).map(r=>`<div class="miss"><div><b>${esc(r.warehouse)}</b> · ${r.carrier}<br><small>${esc(whOf(r.warehouse).name)}${r.mode?` · ${r.mode==='pickup'?'服务商上门':'我方送网点'}`:''}</small></div><div style="text-align:right">预测 ${fmt(r.fc_units)} ${unitOf(r.carrier)==='pallet'?'板':'车'}<br><small>${r.fc_orders!=null?fmt(r.fc_orders)+' 单':'无单量预测'}</small></div></div>`).join('') : `<div class="empty">全部已填报 ✓</div>`;
 }
