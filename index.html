@@ -1119,7 +1119,7 @@ function ruleCell(rule,wh,c,fu,fOrd,hasOrdFc,day,future){
   if(rule.mode==='none') return {html:`<td><div class="cell st-na" title="${title}"><div class="u">无此业务</div><div class="o">黑五预测 ${fmt(fu)} ${unit}${hasOrdFc?` · ${fmt(fOrd)} 单`:''}</div></div></td>`, ao:0};
   const io=future?null:iwmsOrders(wh,c,day);
   const ord=`单 ${io==null?'—':fmt(io)} / ${hasOrdFc?fmt(fOrd):'—'}`;
-  const dev=(io!=null&&hasOrdFc&&fOrd)?Math.round((io/fOrd-1)*100):null;
+  const dev=(io!=null&&hasOrdFc&&fOrd&&day<refToday())?Math.round((io/fOrd-1)*100):null;   // 当天还没做完，不算偏差
   const devTxt=dev==null?'':`<span style="color:${Math.abs(dev)>20?'var(--bad)':'var(--ink3)'}">较预测 ${dev>0?'+':''}${dev}%</span>`;
   if(rule.mode==='fixed'){
     const au=future?null:((io||0)>0?(rule.trucks||1):0);
