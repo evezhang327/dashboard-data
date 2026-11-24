@@ -1137,7 +1137,9 @@ function renderMatrix(){
   const useDates=[day];
   $('matrixTitle').textContent = `仓库 × 服务商 · ${md(day)} 周${wd(day)} ` + (future ? '（尚未开始，显示当天预测）' : day===today ? '今日实时' : '当日');
   const carriers=CARRIER_ORDER.filter(c=>S.f.carriers.has(c));
-  const whs=S.warehouses.filter(w=>whPass(w.code));
+  // 需要填报的仓在上，整仓无需填报（协同单）的放到最下面
+  const noFill=w=>(S.rules||[]).some(r=>r.warehouse===w.code&&r.carrier==='*');
+  const whs=S.warehouses.filter(w=>whPass(w.code)).sort((a,b)=>noFill(a)-noFill(b));
   const fc=fcRows(useDates), pk=pkRows(useDates);
   let h=`<thead><tr><th class="wh">仓库</th>${carriers.map(c=>`<th>${c} <span style="font-weight:400;color:var(--ink3)">${unitOf(c)==='pallet'?'板':'车'}</span></th>`).join('')}<th class="num">合计单量</th></tr></thead><tbody>`;
   let any=false;
@@ -1315,7 +1317,9 @@ function renderDailyMatrix(){
   $('matrixTitle').textContent = `仓库 × 服务商 · ${md(day)} 周${wd(day)} ${day===today?'今日实时':'当日'} · 登记实际到车 / 预派车`;
   const carriers=CARRIER_ORDER.filter(c=>S.f.carriers.has(c));
   const L=dLines(day), pk=pkRows([day]);
-  const whs=S.warehouses.filter(w=>whPass(w.code));
+  // 需要填报的仓在上，整仓无需填报（协同单）的放到最下面
+  const noFill=w=>(S.rules||[]).some(r=>r.warehouse===w.code&&r.carrier==='*');
+  const whs=S.warehouses.filter(w=>whPass(w.code)).sort((a,b)=>noFill(a)-noFill(b));
   let h=`<thead><tr><th class="wh">仓库</th>${carriers.map(c=>`<th>${c} <span style="font-weight:400;color:var(--ink3)">车</span></th>`).join('')}<th class="num">预测单量</th></tr></thead><tbody>`;
   let any=false;
   for(const w of whs){
