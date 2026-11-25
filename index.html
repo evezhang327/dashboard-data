@@ -1170,7 +1170,7 @@ function renderMatrix(){
       const trucksNote = unitOf(c)==='pallet' && p.length ? ` · ${p.length}车` : '';
       // 按车计的服务商：另起一行显示托数 = 填报托数 / 早上预测的 Gaylord + 托盘
       const aPal=p.reduce((s,r)=>s+(r.pallets||0),0), fPal=(S.dl||[]).filter(r=>r.warehouse===w.code&&r.carrier===c&&r.date===day).reduce((s,r)=>s+(r.gaylord||0)+(r.pallets||0),0);
-      const palLine = unitOf(c)==='truck' && (aPal||fPal) ? `<div class="o">托 ${future?'—':fmt(aPal)} / ${fPal?fmt(fPal):'—'}</div>` : '';
+      const palLine = unitOf(c)==='truck' && (aPal||fPal) && !(w.code==='ONT-LG-5-US'&&c==='FedEx Ground') ? `<div class="o">托 ${future?'—':fmt(aPal)} / ${fPal?fmt(fPal):'—'}</div>` : '';
       cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div>${palLine}${subLine(w.code,c,p)}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
