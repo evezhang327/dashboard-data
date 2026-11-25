@@ -76,6 +76,8 @@ body.dropf .ndrop{display:none!important}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0 8px;font-size:12px;color:var(--ink3)}.steps div{display:flex;flex-direction:column;gap:2px}.steps i{height:4px;border-radius:2px;background:#e3e5ea}.steps .ok{color:var(--ink2)}.steps .ok i{background:#1f8a4c}.steps .cur{color:var(--ink);font-weight:600}.steps .cur i{background:#d98a00}.steps time{font-variant-numeric:tabular-nums}
 .eta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin-bottom:10px}.late{color:var(--bad);font-weight:600}
 .dchip{white-space:nowrap;font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;background:#fff1d6;color:#8a5600}.dchip.wait{background:#e5f5ec;color:#1f8a4c}.dchip.late{background:var(--bad-bg);color:var(--bad)}.dchip.done{background:#eef1f5;color:var(--ink2)}
+.dnote{font-size:13px;background:#fff8e6;border-radius:8px;padding:6px 10px;margin-bottom:10px;color:#6b4a00}.dmng{display:block;width:100%;margin-top:8px;padding:9px;border:1px dashed var(--line);border-radius:10px;background:#fff;color:var(--ink2);font-size:13px}
+.msec{border-top:1px solid var(--line);margin-top:12px;padding-top:6px}.msec h4{margin:6px 0 2px;font-size:14px}.msec .btn2{margin-top:8px}
 .dbtn{display:block;width:100%;padding:12px;border:0;border-radius:11px;color:#fff;font-weight:700;font-size:15px}.dbtn.amber{background:#d98a00}.dbtn.green{background:#1f8a4c}
 .cf{background:#f8f9fb;border-radius:10px;padding:10px 12px;margin:10px 0}.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;align-items:baseline}.kv span{color:var(--ink2);font-size:13px}
 .badge{display:inline-block;min-width:18px;margin-left:5px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:18px}.badge.hot{background:#e8a317}
@@ -418,7 +420,7 @@ async function loadHistory(){
   if(!LIVE){ S.hRows=S.demoRows.filter(r=>r.warehouse===w.code&&r.date>=from&&r.date<=to); return renderHistory(); }
   $('hList').innerHTML=`<div class="empty" style="text-align:center;color:var(--ink3);padding:20px">${t('hLoading')}</div>`;
   const { data, error } = S.admin
-    ? await sbA.from('pickups').select('id,date,arrived_at,carrier,trailer_no,orders,pallets,exception_type,note,reporter,photo_paths,voided,void_reason,created_at,kind,sub_carrier,dock,drop_status,loaded_at,picked_at,est_qty,est_unit').eq('warehouse',w.code).gte('date',from).lte('date',to).order('arrived_at',{ascending:false}).limit(1000)
+    ? await sbA.from('pickups').select('id,date,arrived_at,carrier,trailer_no,orders,pallets,exception_type,note,reporter,photo_paths,voided,void_reason,created_at,kind,sub_carrier,dock,drop_status,loaded_at,picked_at,est_qty,est_unit,held_until,admin_note').eq('warehouse',w.code).gte('date',from).lte('date',to).order('arrived_at',{ascending:false}).limit(1000)
     : await sb.rpc('wh_history',{p_wh:w.code,p_from:from,p_to:to,p_carrier:null});
   if(S.admin && data) data.forEach(r=>{ r.photo_count=(r.photo_paths||[]).length; });
   if(error){ $('hList').innerHTML=`<div class="err">${t('hErr')}${esc(error.message)}</div>`; S.hRows=[]; return; }
@@ -465,9 +467,9 @@ function renderAdminBar(){
 async function checkAdmin(){
   if(!LIVE) return;
   const { data:{ session } } = await sbA.auth.getSession();
-  S.admin=false; S.adminEmail=session&&session.user&&session.user.email;
+  S.admin=false; S.acct=!!session; S.adminEmail=session&&session.user&&session.user.email;
   if(session){ const r=await sbA.rpc('is_admin'); S.admin=!!r.data; }
-  renderAdminBar();
+  renderAdminBar(); if(S.tab==='tasks') renderDrops();
 }
 function adminLogin(){
   amodal(`<h3 style="margin:2px 0 4px">管理员登录</h3><div style="font-size:12px;color:var(--ink2)">登录后可在历史记录里修改、删除记录，「登记」页变为管理员异常报备（不计车）。仓库同事登记不需要登录。</div>
@@ -598,17 +600,21 @@ const hourIn=ts=>+new Intl.DateTimeFormat('en-GB',{timeZone:tzOf(),hour:'2-digit
 const dayIn=ts=>new Intl.DateTimeFormat('en-CA',{timeZone:tzOf()}).format(new Date(ts));
 // 可能留柜：16:00 以后开始装、或前一天开始装，超过 1 小时还没完成装货 → 不算超时
 const isHeld=r=>dState(r)==='load'&&Date.now()>etaOf(r)&&(hourIn(r.arrived_at)>=HOLD_HOUR||dayIn(r.arrived_at)<dayIn(Date.now()));
+const hUntil=r=>!!r.held_until&&dState(r)!=='done';
+const mdD=d=>{ const [y,m,dd]=String(d).split('-'); return `${+m}/${+dd}`; };
 const waitMin=r=>dState(r)==='wait'&&r.loaded_at?Math.round((Date.now()-new Date(r.loaded_at))/60000):0;
-const isLate=r=>dState(r)==='load'&&Date.now()>etaOf(r)&&!isHeld(r);
-const isStale=r=>waitMin(r)>WAIT_WARN;
+const isLate=r=>dState(r)==='load'&&Date.now()>etaOf(r)&&!isHeld(r)&&!hUntil(r);
+const isStale=r=>waitMin(r)>WAIT_WARN&&!hUntil(r);
 function dChip(r){ const s=dState(r);
   if(s==='done') return `<span class="dchip done">${L('已提 · 闭环','Picked up · closed')}</span>`;
+  if(hUntil(r)) return `<span class="dchip done">${L(`留柜 · 预计 ${mdD(r.held_until)} 提`,`Held · pickup ${mdD(r.held_until)}`)}</span>`;
   if(s==='wait') return `<span class="dchip ${isStale(r)?'late':'wait'}">${isStale(r)?L('待提超 2 小时','Waiting > 2h'):L('待提货','Awaiting pickup')} · Dock ${esc(r.dock)}</span>`;
   if(isHeld(r)) return `<span class="dchip done">${L('可能留柜 · 次日继续装','Held · continue tomorrow')}</span>`;
   return `<span class="dchip ${isLate(r)?'late':'load'}">${isLate(r)?L('装载超时','Loading overdue'):L('装载中','Loading')}</span>`; }
 function dSteps(r){ const s=dState(r); const cell=(n,ts,c)=>`<div class="${c}"><i></i>${n}<time>${ts?hm(ts):'—'}</time></div>`;
   return `<div class="steps">${cell(L('装载中','Loading'),r.arrived_at,s==='load'?'cur':'ok')}${cell(L('待提货','Awaiting'),r.loaded_at,s==='wait'?'cur':s==='done'?'ok':'')}${cell(L('已提','Picked'),r.picked_at,s==='done'?'ok':'')}</div>`; }
 function dEta(r){ const s=dState(r);
+  if(hUntil(r)) return `<div class="eta"><span>${md2(r.arrived_at)} ${hm(r.arrived_at)} ${L('开始','started')}${s==='wait'?L(`，${hm(r.loaded_at)} 装完`,`, loaded ${hm(r.loaded_at)}`):''}</span><span>${L(`留柜，预计 ${mdD(r.held_until)} 提货`,`Held, pickup ${mdD(r.held_until)}`)}</span></div>`;
   if(s==='done') return `<div class="eta">${L('用时','Took')} <b>${Math.round((new Date(r.picked_at)-new Date(r.arrived_at))/60000)} ${L('分钟','min')}</b></div>`;
   if(s==='wait') return `<div class="eta"><span>${L('已装完','Loaded')} <b>${waitMin(r)} ${L('分钟','min')}</b>${L('，等待司机提走',' ago, waiting for pickup')}</span>${isStale(r)?`<span class="late">${L('柜子还在吗？拉走了请点「确认已提」','Still here? If it left, tap "Confirm picked up"')}</span>`:''}</div>`;
   if(isHeld(r)) return `<div class="eta"><span>${md2(r.arrived_at)} ${hm(r.arrived_at)} ${L('开始，可能留柜到次日继续装','started, likely held to continue tomorrow')}</span><span>${L('装完请点「完成装货」','Tap "Loading done" when finished')}</span></div>`;
@@ -620,7 +626,7 @@ function dAct(r){ const s=dState(r);
   return ''; }
 function dQty(r){ const a=r.pallets!=null?`${r.pallets} ${L('板','plt')}`:r.orders!=null?`${r.orders} ${L('单','orders')}`:null;
   return a?` · ${L('实际','actual')} ${a}`:(r.est_qty!=null?` · ${L('预计','est.')} ${r.est_qty} ${r.est_unit==='单'?L('单','orders'):L('板','plt')}`:''); }
-function dCard(r){ return `<div class="card task ${dState(r)}"><div class="th"><div><div class="tr">${esc(r.trailer_no)}</div><div class="sub">${esc(dispCarrier(r))} · Dock ${esc(r.dock)}${dQty(r)}${r.reporter?` · ${esc(r.reporter)}`:''}</div></div>${dChip(r)}</div>${dSteps(r)}${dEta(r)}${dAct(r)}</div>`; }
+function dCard(r){ return `<div class="card task ${dState(r)}"><div class="th"><div><div class="tr">${esc(r.trailer_no)}</div><div class="sub">${esc(dispCarrier(r))} · Dock ${esc(r.dock)}${dQty(r)}${r.reporter?` · ${esc(r.reporter)}`:''}</div></div>${dChip(r)}</div>${dSteps(r)}${dEta(r)}${r.admin_note?`<div class="dnote">📝 ${esc(r.admin_note)}</div>`:''}${dAct(r)}${S.acct?`<button class="dmng" data-dmng="${r.id}">⚙️ ${L('管理（改信息 / 时间 / 留柜 / 并入 / 作废 / 备注）','Manage')}</button>`:''}</div>`; }
 async function loadDrops(){
   const w=whObj(); if(!w||w.code!==DROP_WH||!LIVE) return;
   const { data, error } = await sb.rpc('drop_open',{p_wh:w.code});
@@ -634,10 +640,12 @@ function renderDrops(){
   $('openCnt').classList.toggle('hot', open.some(r=>isStale(r)||isLate(r)));
   if(S.tab!=='tasks') return;
   $('tasksView').innerHTML = `<div class="hrow"><div class="ro" style="flex:1;margin:0">${L(`本仓未闭环的甩柜任务 ${open.length} 个 · 装载超过 1 小时、待提超过 2 小时标红；16:00 以后开始装的按可能留柜处理`,`${open.length} open drop-trailer tasks · red = loading > 1h or waiting > 2h; started after 16:00 = may be held overnight`)}</div><button class="chip" id="dRefresh" style="flex:none">${t('refresh')}</button></div>`
+    + (LIVE?(S.acct?`<div style="text-align:right;margin:-4px 0 8px;font-size:12px;color:var(--ink3)">${L('已登录','Signed in')} ${esc(S.adminEmail||'')} · ${L('可管理任务','can manage tasks')} <button id="dLogout" style="background:none;border:0;color:var(--ink3);text-decoration:underline;font-size:12px">${L('退出','Sign out')}</button></div>`
+      :`<div style="text-align:right;margin:-4px 0 8px"><button id="dLogin" style="background:none;border:0;color:var(--ink3);font-size:12px;text-decoration:underline">${L('运配账号登录 · 管理任务','Sign in to manage tasks')}</button></div>`):'')
     + (open.length ? open.map(dCard).join('') : `<div class="card" style="text-align:center;color:var(--ink3)">${L('没有进行中的提货任务','No open pickup tasks')}</div>`);
 }
 function renderDropRemind(){
-  const w=whObj(); const st=(S.drops||[]).filter(r=>dState(r)==='wait');
+  const w=whObj(); const st=(S.drops||[]).filter(r=>dState(r)==='wait'&&!hUntil(r));
   $('dropRemind').innerHTML = (w&&w.code===DROP_WH&&st.length) ? `<div class="remind"><b>${L(`有 ${st.length} 个柜子装完了，还没确认已提`,`${st.length} loaded trailer(s) not yet confirmed as picked up`)}</b><ul>${st.map(r=>`<li>Dock ${esc(r.dock)} · ${esc(r.trailer_no)} · ${L(`已等 ${waitMin(r)} 分钟`,`waiting ${waitMin(r)} min`)}${isStale(r)?L('（超 2 小时）',' (> 2h)'):''}</li>`).join('')}</ul><div style="font-size:12px;color:var(--ink2);margin-bottom:8px">${L('柜子被拉走后请点「确认已提」，任务才闭环','Tap "Confirm picked up" once the trailer leaves to close the task')}</div><button class="dbtn amber" id="goTasks">${L('去确认已提','Go confirm')}</button></div>` : '';
 }
 function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2200); }
@@ -721,7 +729,67 @@ function openPick(id){
     if(res.error||!['ok','already'].includes(res.data)){ $('pErr').textContent=t('fail')+(res.error?res.error.message:res.data); $('pGo').disabled=false; return; }
     amodalClose(); toast(L(`${r.trailer_no} 已提走，任务闭环`,`${r.trailer_no} picked up, task closed`)); await loadDrops(); if(S.tab==='history') loadHistory(); };
 }
+// ---- 甩柜任务管理（有账号登录的都可以）：改信息 / 改时间 / 留柜 / 并入 / 作废 / 备注；每次修改都留记录并推 LAX5 群 ----
+function dropLogin(){
+  amodal(`<h3 style="margin:2px 0 4px">${L('运配账号登录','Sign in')}</h3><div style="font-size:12px;color:var(--ink2)">${L('登录后可在「提货任务跟进」里修改任务（改信息 / 时间 / 留柜 / 并入 / 作废 / 备注）。仓库同事登记不需要登录。','Sign in to manage drop-trailer tasks.')}</div>
+    <label>${L('邮箱','Email')}<input id="dlEmail" type="email" autocomplete="username"></label><label>${L('密码','Password')}<input id="dlPwd" type="password" autocomplete="current-password"></label>
+    <div class="e" id="dlErr"></div><button class="btn2 dark" id="dlGo">${L('登录','Sign in')}</button><button class="btn2" id="dlCancel">${L('取消','Cancel')}</button>`);
+  $('dlCancel').onclick=amodalClose;
+  $('dlGo').onclick=async()=>{ $('dlErr').textContent='';
+    const { error } = await sbA.auth.signInWithPassword({ email:$('dlEmail').value.trim(), password:$('dlPwd').value });
+    if(error){ $('dlErr').textContent=L('登录失败：','Sign-in failed: ')+error.message; return; }
+    await checkAdmin(); amodalClose(); renderDrops(); };
+}
+const DA_ERR={no_auth:'请先登录',not_found:'任务不存在',voided:'任务已作废',nochange:'没有改动',need_loaded:'填了「已提」时间，也要填「装完」时间',bad_order:'时间顺序不对：开始 ≤ 装完 ≤ 已提',picked:'已提的任务不能留柜',bad_target:'目标任务不可用（已作废或已提）',need_reason:'请填写作废原因',bad_action:'操作不支持'};
+async function dAdmin(id, action, p, okMsg){
+  const res=await sbA.rpc('drop_admin',{p_id:id,p_action:action,p:p||{}});
+  if(res.error){ toast(L('操作失败：','Failed: ')+res.error.message); return false; }
+  if(res.data!=='ok'){ toast(L(DA_ERR[res.data]||res.data, res.data)); return false; }
+  toast(okMsg||L('已保存，已推送到群里','Saved')); amodalClose(); await loadDrops(); if(S.tab==='history') loadHistory(); return true;
+}
+function openManage(id){
+  const r=(S.drops||[]).find(x=>x.id===id); if(!r) return; const tz=tzOf();
+  const others=(S.drops||[]).filter(x=>x.id!==r.id);
+  const tmr=new Date(Date.now()+86400000), d2=new Date(Date.now()+2*86400000);
+  const ymd=d=>new Intl.DateTimeFormat('en-CA',{timeZone:tz}).format(d);
+  amodal(`<h3 style="margin:2px 0 2px">⚙️ ${L('管理任务','Manage task')} · ${esc(r.trailer_no)}</h3><div style="font-size:12px;color:var(--ink2)">${esc(dispCarrier(r))} · Dock ${esc(r.dock)} · ${L('每次修改都会留记录，并推送到 LAX5 群','Every change is logged and posted to the LAX5 group')}</div>
+    <div class="msec"><h4>${L('改信息','Edit info')}</h4>
+      <div class="g2"><label>Trailer<input id="mTr" value="${esc(r.trailer_no)}"></label><label>Dock<input id="mDock" value="${esc(r.dock||'')}"></label></div>
+      <div class="g2"><label>${L('类型','Type')}<select id="mSub">${DROP_SUBS.map(x=>`<option ${x===r.sub_carrier?'selected':''}>${x}</option>`).join('')}</select></label>
+      <label>${L('预计量','Est.')}<div class="g2" style="gap:6px"><input id="mQty" type="number" min="0" step="1" value="${r.est_qty??''}"><select id="mUnit"><option ${r.est_unit!=='单'?'selected':''}>板</option><option ${r.est_unit==='单'?'selected':''}>单</option></select></div></label></div>
+      <button class="btn2 dark" id="mEdit">${L('保存信息','Save info')}</button></div>
+    <div class="msec"><h4>${L('改环节时间','Edit stage times')}</h4><div style="font-size:12px;color:var(--ink3)">${L('清空「装完 / 已提」= 退回上一步；仓库当地时间','Clear loaded / picked to step back; warehouse local time')}</div>
+      <label>${L('开始装载','Loading start')}<input id="mA" type="datetime-local" value="${toTzInput(r.arrived_at,tz)}"></label>
+      <label>${L('装完（待提货）','Loaded')}<input id="mL" type="datetime-local" value="${r.loaded_at?toTzInput(r.loaded_at,tz):''}"></label>
+      <label>${L('已提','Picked up')}<input id="mP" type="datetime-local" value="${r.picked_at?toTzInput(r.picked_at,tz):''}"></label>
+      <button class="btn2 dark" id="mTimes">${L('保存时间','Save times')}</button></div>
+    <div class="msec"><h4>${L('留柜','Hold')}</h4><div style="font-size:12px;color:var(--ink3)">${L('标记后不算超时、不推超时提醒；早上 7 点留柜清单里会列出','No overdue alerts while held')}</div>
+      <label>${L('预计提货日期','Expected pickup date')}<input id="mHold" type="date" value="${r.held_until||ymd(d2)}"></label>
+      <button class="btn2 dark" id="mHoldGo">${L('标记留柜','Mark held')}</button>${r.held_until?`<button class="btn2" id="mUnhold">${L('取消留柜','Unhold')}</button>`:''}</div>
+    <div class="msec"><h4>${L('并入其他任务','Merge into another task')}</h4><div style="font-size:12px;color:var(--ink3)">${L('这个柜子的货装进了另一个柜子：本任务作废，预计量加到目标任务；类型不同时目标自动改 Mixed','This task is voided and merged into the target')}</div>
+      ${others.length?`<label>${L('并入到','Merge into')}<select id="mTo">${others.map(x=>`<option value="${x.id}">${esc(x.trailer_no)} · ${esc(dispCarrier(x))} · Dock ${esc(x.dock)}</option>`).join('')}</select></label><button class="btn2 dark" id="mMerge">${L('确认并入','Merge')}</button>`:`<div style="font-size:13px;color:var(--ink3);margin-top:6px">${L('没有其他进行中的任务','No other open tasks')}</div>`}</div>
+    <div class="msec"><h4>${L('管理员备注','Admin note')}</h4><label><input id="mNote" value="${esc(r.admin_note||'')}" placeholder="${L('显示在任务卡片上','Shown on the task card')}"></label><button class="btn2 dark" id="mNoteGo">${L('保存备注','Save note')}</button></div>
+    <div class="msec"><h4 style="color:var(--bad)">${L('作废任务','Void task')}</h4><label><input id="mVoid" placeholder="${L('作废原因（必填），如：重复登记','Reason (required)')}"></label><button class="btn2" id="mVoidGo" style="color:var(--bad);border-color:var(--bad)">${L('作废（不计车、不再提醒）','Void')}</button></div>
+    <button class="btn2" id="mClose" style="margin-top:14px">${L('关闭','Close')}</button>`);
+  $('mClose').onclick=amodalClose;
+  $('mEdit').onclick=()=>dAdmin(r.id,'edit',{trailer_no:$('mTr').value,dock:$('mDock').value,sub_carrier:$('mSub').value,est_qty:$('mQty').value,est_unit:$('mUnit').value});
+  $('mTimes').onclick=()=>{ if(!$('mA').value) return toast(L('请填写开始时间','Enter start time'));
+    const iso=v=>v?fromTzInput(v,tz).toISOString():'';
+    dAdmin(r.id,'times',{arrived_at:iso($('mA').value),loaded_at:iso($('mL').value),picked_at:iso($('mP').value)}); };
+  $('mHoldGo').onclick=()=>{ if(!$('mHold').value) return toast(L('请选择日期','Pick a date')); dAdmin(r.id,'hold',{held_until:$('mHold').value}); };
+  if($('mUnhold')) $('mUnhold').onclick=()=>dAdmin(r.id,'hold',{held_until:''});
+  if($('mMerge')) $('mMerge').onclick=()=>{ const to=others.find(x=>x.id===$('mTo').value);
+    if(!$('mMerge').dataset.c){ $('mMerge').dataset.c=1; $('mMerge').textContent=L(`再点一次确认：${r.trailer_no} 并入 ${to.trailer_no}`,`Tap again to confirm`); return; }
+    dAdmin(r.id,'merge',{target:to.id},L(`${r.trailer_no} 已并入 ${to.trailer_no}`,'Merged')); };
+  $('mNoteGo').onclick=()=>dAdmin(r.id,'note',{note:$('mNote').value});
+  $('mVoidGo').onclick=()=>{ if(!$('mVoid').value.trim()) return toast(L('请填写作废原因','Enter a reason'));
+    if(!$('mVoidGo').dataset.c){ $('mVoidGo').dataset.c=1; $('mVoidGo').textContent=L('再点一次确认作废','Tap again to confirm'); return; }
+    dAdmin(r.id,'void',{reason:$('mVoid').value.trim()},L('已作废','Voided')); };
+}
 document.addEventListener('click', e=>{
+  const mg=e.target.closest('[data-dmng]'); if(mg) return openManage(mg.dataset.dmng);
+  if(e.target.id==='dLogin') return dropLogin();
+  if(e.target.id==='dLogout'){ sbA.auth.signOut().then(()=>{ S.acct=false; S.admin=false; renderAdminBar(); renderDrops(); }); return; }
   const a=e.target.closest('[data-dload]'); if(a) return openLoad(a.dataset.dload);
   const p=e.target.closest('[data-dpick]'); if(p) return openPick(p.dataset.dpick);
   if(e.target.id==='goTasks') return setTab('tasks');
