@@ -837,7 +837,7 @@ async function loadLive(){
   // 特殊提货规则（协同单 / 只比单量 / 固定车次 / 无此业务）：这些格子不要求现场填报
   loadHb();
   try{ const pr=await sb.from('pickup_rules').select('*'); S.rules = pr.error ? [] : pr.data; }catch(e){ S.rules=[]; }
-  try{ const h=await sb.from('handover_daily').select('warehouse,date,carrier,trucks,containers,packages,unbound,trailers,updated_at').gte('date',loadRange()[0]).lte('date',loadRange()[1]).limit(5000); if(h.error) throw h.error; setHandover(h.data); }catch(e){ console.warn('容器交接加载失败', e); setHandover([]); }
+  try{ const h=await sb.from('handover_daily').select('warehouse,date,carrier,trucks,containers,packages,unbound,unbound_late,trailers,updated_at').gte('date',loadRange()[0]).lte('date',loadRange()[1]).limit(5000); if(h.error) throw h.error; setHandover(h.data); }catch(e){ console.warn('容器交接加载失败', e); setHandover([]); }
   try{ await loadDaily(); }catch(e){ console.warn('日均预测加载失败', e); }
   S.lastLoad = new Date();
 }
@@ -920,9 +920,9 @@ const HO_PER_TRUCK = 30;
 const HOC = {b:'#E1251B', n:'#0f172a', f:'#64748b'};
 const hoTriple = (b,n,f,big) => `<span style="color:${HOC.b}">${fmt(b)}</span> / <span style="color:${HOC.n}">${fmt(n)}</span>${f?` / <span style="color:${HOC.f}">${fmt(f)}</span>`:''}`;
 const hoLabel = f => `<span style="color:${HOC.b}">实际绑车</span> / <span style="color:${HOC.n}">应绑车</span>${f?` / <span style="color:${HOC.f}">黑五预测</span>`:''}`;
-const hoBind = ho => { const tot=ho.containers||0, bc=(ho.trailers||[]).reduce((t,x)=>t+(x.containers||0),0);
-  const bound=ho.trucks||0;   // 应绑车 = 已绑的车 + 没绑车号的板数 ÷ 30（已绑的车按实际车数算，不按 30 板折）
-  return {bound, need: bound + Math.ceil(Math.max(0,tot-bc)/HO_PER_TRUCK), boundCont:bc, totCont:tot}; };
+const hoBind = ho => { const late=ho.unbound_late||0, tot=(ho.containers||0)-late, bc=(ho.trailers||[]).reduce((t,x)=>t+(x.containers||0),0);
+  const bound=ho.trucks||0;   // 应绑车 = 已绑的车 + 没绑车号的板数 ÷ 30（已绑的车按实际车数算；最后一车走后才交接的板算下一车，不计当天）
+  return {bound, need: bound + Math.ceil(Math.max(0,tot-bc)/HO_PER_TRUCK), boundCont:bc, totCont:tot, late}; };
 const isHo = (wh,c) => HO_COMBOS.has(wh+'|'+c);
 // 到车记录 = 人工填报 + 容器交接车次（容器交接的格子以 iWMS 为准，同格人工填报不再重复计算）
 // LAX5 甩柜：FedEx Ground 拆成 NC / C / Mixed 车数
@@ -955,7 +955,7 @@ function hoCell(w,c,ho,fu,fOrd,hasOrdFc,future){
   const b = hoBind(ho);
   const st = b.need ? (status(b.bound,b.need,future)||['st-auto','']) : ['st-auto',''];
   const tips = (ho.trailers||[]).map(t=>`${t.trailer}：${fmt(t.containers)} 板`).join('\n');
-  return `<td><div class="cell ${st[0]} ho" title="${esc(w)} · ${c} · 容器交接（iWMS）· 应绑车按 53 尺 ${HO_PER_TRUCK} 板/车\n${esc(tips)}"><div class="u">${hoTriple(b.bound,b.need,0)} <span class="ho-sub">辆</span></div><div class="o">${hoLabel(0)}</div><div class="o">实际绑车 ${fmt(b.boundCont)} 板 · 应绑车 ${fmt(b.totCont)} 板</div><div class="s"><span class="ho-tag">容器交接</span>${b.bound<b.need?` <span class="ho-unb">待绑 ${fmt(b.need-b.bound)} 车</span>`:''}</div></div></td>`;
+  return `<td><div class="cell ${st[0]} ho" title="${esc(w)} · ${c} · 容器交接（iWMS）· 应绑车按 53 尺 ${HO_PER_TRUCK} 板/车\n${esc(tips)}"><div class="u">${hoTriple(b.bound,b.need,0)} <span class="ho-sub">辆</span></div><div class="o">${hoLabel(0)}</div><div class="o">实际绑车 ${fmt(b.boundCont)} 板 · 应绑车 ${fmt(b.totCont)} 板</div><div class="s"><span class="ho-tag">容器交接</span>${b.bound<b.need?` <span class="ho-unb">待绑 ${fmt(b.need-b.bound)} 车</span>`:''}</div>${b.late?`<div class="o" style="font-size:11px;color:var(--ink3)" title="最后一辆车扫完之后才交接、没录车号的板，算下一车">另 ${fmt(b.late)} 板待下一车</div>`:''}</div></td>`;
 }
 
 function agg(fc, pk){
