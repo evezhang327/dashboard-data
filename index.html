@@ -914,7 +914,7 @@ const hoRaw = (wh,c,d) => (S.ho||{})[wh+'|'+c+'|'+d];
 const HO_FALLBACK = new Set(['EWR-LG-1-US|Amazon Shipping']);
 const hasManual = (wh,c,d) => (S.pickups||[]).some(r=>!r.voided&&r.kind!=='admin'&&r.warehouse===wh&&r.carrier===c&&r.date===d);
 const hoOf = (wh,c,d) => { const h=hoRaw(wh,c,d); return (h && HO_FALLBACK.has(wh+'|'+c) && !(h.trucks>0) && hasManual(wh,c,d)) ? undefined : h; };
-const hoNote = (wh,c,d) => (d && isHo(wh,c) && hoRaw(wh,c,d) && !hoOf(wh,c,d)) ? `<div class="o" style="font-size:11px;color:#b26b00" title="iWMS 当天交接没录 Trailer 号，暂按现场填报计车">iWMS 未绑车 · 按填报</div>` : '';
+const hoNote = (wh,c,d) => (d && isHo(wh,c) && hoRaw(wh,c,d) && !hoOf(wh,c,d)) ? `<div class="o" style="font-size:11px;color:#2a5bd7" title="iWMS 当天交接没录 Trailer 号，暂按现场填报计车">iWMS 未绑车 · 按填报</div>` : '';
 // 绑车：实际绑车 = iWMS 里绑了车号的车数 / 板数；应绑车 = 实际绑车 + 未绑车号的板数按 53 尺 30 板一车折算
 const HO_PER_TRUCK = 30;
 const HOC = {b:'#E1251B', n:'#0f172a', f:'#64748b'};
@@ -1187,7 +1187,7 @@ function renderMatrix(){
       const au = unitOf(c)==='pallet' ? p.reduce((s,r)=>s+(r.pallets||0),0) : p.length;
       const aOrd=p.reduce((s,r)=>s+(r.orders||0),0);
       fo+=fOrd; ao+=aOrd;
-      const st=(isHo(w.code,c)&&!au&&!future)?['st-none','待容器交接']:(status(au,fu,future)||['st-none','—']);
+      const st=(isHo(w.code,c)&&!au&&!future)?['st-none','待容器交接']:(hoRaw(w.code,c,day)&&!hoOf(w.code,c,day)&&!fu)?['st-auto','']:(status(au,fu,future)||['st-none','—']);
       const trucksNote = unitOf(c)==='pallet' && p.length ? ` · ${p.length}车` : '';
       // 按车计的服务商：另起一行显示托数 = 填报托数 / 早上预测的 Gaylord + 托盘
       const aPal=p.reduce((s,r)=>s+(r.pallets||0),0), fPal=(S.dl||[]).filter(r=>r.warehouse===w.code&&r.carrier===c&&r.date===day).reduce((s,r)=>s+(r.gaylord||0)+(r.pallets||0),0);
