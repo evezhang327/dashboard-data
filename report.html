@@ -66,6 +66,22 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
 .tabs button.on{background:#fff;color:var(--red);box-shadow:0 1px 2px #0f172a1a}
 .hrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .hrow select,.hrow input{flex:1;padding:10px;font-size:15px}
+body.dropf .ndrop{display:none!important}
+.drop-only{display:none}body.dropf .drop-only{display:block}
+.unitsw{display:flex;gap:6px;margin-top:8px}.unitsw button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:9px;padding:8px;font-weight:600}.unitsw button.on{border-color:var(--red);color:var(--red);background:#fdeceb}
+.flow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink2)}.flow b{background:#f1f3f6;border-radius:7px;padding:3px 8px;color:var(--ink)}
+.remind{background:#fff4e5;border:1px solid #f5cf94;border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:14px;color:#6b3d00}.remind ul{margin:6px 0;padding-left:18px;font-size:13px}
+.task{border-left:4px solid #d98a00}.task.wait{border-left-color:#1f8a4c}.task.done{border-left-color:#94a3b8}
+.task .th{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.task .tr{font-weight:700;font-size:18px;letter-spacing:.5px}.task .sub{font-size:13px;color:var(--ink2);margin-top:2px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0 8px;font-size:12px;color:var(--ink3)}.steps div{display:flex;flex-direction:column;gap:2px}.steps i{height:4px;border-radius:2px;background:#e3e5ea}.steps .ok{color:var(--ink2)}.steps .ok i{background:#1f8a4c}.steps .cur{color:var(--ink);font-weight:600}.steps .cur i{background:#d98a00}.steps time{font-variant-numeric:tabular-nums}
+.eta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin-bottom:10px}.late{color:var(--bad);font-weight:600}
+.dchip{white-space:nowrap;font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;background:#fff1d6;color:#8a5600}.dchip.wait{background:#e5f5ec;color:#1f8a4c}.dchip.late{background:var(--bad-bg);color:var(--bad)}.dchip.done{background:#eef1f5;color:var(--ink2)}
+.dbtn{display:block;width:100%;padding:12px;border:0;border-radius:11px;color:#fff;font-weight:700;font-size:15px}.dbtn.amber{background:#d98a00}.dbtn.green{background:#1f8a4c}
+.cf{background:#f8f9fb;border-radius:10px;padding:10px 12px;margin:10px 0}.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;align-items:baseline}.kv span{color:var(--ink2);font-size:13px}
+.badge{display:inline-block;min-width:18px;margin-left:5px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:18px}.badge.hot{background:#e8a317}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:#0f172ae6;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:70;max-width:90vw}.toast.show{opacity:1;transform:translateX(-50%)}
+
+body:not(.admf) .admf-only,body:not(.admf) .admf-inl{display:none!important}
 body.admf .nadm{display:none!important}
 .admf-only,.admf-inl{display:none}body.admf .admf-only{display:flex}body.admf .admf-inl{display:inline}
 .adm{font-size:12px;background:#fff4e5;color:#8a4b00;border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
@@ -104,10 +120,11 @@ body.admf .nadm{display:none!important}
   <h1 style="display:flex;align-items:center;gap:10px"><img src="data:image/webp;base64,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" alt="" style="height:40px;filter:drop-shadow(0 1px 2px #0003)"><span><span data-t="title"></span><small id="whTitle"></small></span></h1>
   <div style="display:flex;gap:8px;align-items:center"><a id="backDash" href="index.html" style="display:none;color:#fff;font-size:13px;opacity:.8;text-decoration:none;white-space:nowrap">← 看板</a><div class="lang"><button data-lang="zh">中</button><button data-lang="en">EN</button></div></div>
 </div>
-<nav class="tabs"><div><button data-tab="form" class="on" data-t="tabForm"></button><button data-tab="history" data-t="tabHistory"></button></div></nav>
+<nav class="tabs"><div><button data-tab="form" class="on" data-t="tabForm"></button><button data-tab="tasks" id="tabTasks" style="display:none"><span data-t="tabTasks"></span><span class="badge" id="openCnt" style="display:none"></span></button><button data-tab="history" data-t="tabHistory"></button></div></nav>
 
 <main id="formView">
   <div class="adm admf-only" id="fAdmin"></div>
+  <div id="dropRemind"></div>
   <div class="note" id="demoNote" style="display:none" data-t="demo"></div>
 
   <div class="card">
@@ -120,30 +137,42 @@ body.admf .nadm{display:none!important}
     <div class="grid" id="carriers"></div>
   </div>
 
+  <div class="card drop-only" id="dropFlow"></div>
+
   <div class="card nadm">
     <div class="lbl"><span><span data-t="trailer"></span><span class="req">*</span></span><small data-t="trailerHint"></small></div>
     <input type="text" id="trailer" class="trailer" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="e.g. 53A1234">
   </div>
 
+  <div class="card drop-only">
+    <div class="lbl"><span><span id="dockLbl">Dock</span><span class="req">*</span></span></div>
+    <input type="text" id="dock" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="e.g. 12">
+  </div>
+  <div class="card drop-only">
+    <div class="lbl"><span id="estLbl"></span><small id="estHint"></small></div>
+    <input type="number" id="estQty" inputmode="numeric" min="0" step="1" placeholder="0">
+    <div class="unitsw"><button type="button" data-eu="板" class="on" id="euP"></button><button type="button" data-eu="单" id="euO"></button></div>
+  </div>
+
   <div class="card">
-    <div class="lbl"><span><span data-t="arrived"></span><span class="req">*</span></span><button type="button" class="chip" id="nowBtn" style="padding:3px 10px;font-size:12px" data-t="now"></button></div>
+    <div class="lbl"><span><span id="arrLbl"></span><span class="req">*</span></span><button type="button" class="chip" id="nowBtn" style="padding:3px 10px;font-size:12px" data-t="now"></button></div>
     <input type="datetime-local" id="arrived">
   </div>
 
-  <div class="card nadm">
+  <div class="card nadm ndrop">
     <div class="row">
       <div><div class="lbl"><span><span data-t="orders"></span><span class="req qreq">*</span></span><small class="qhint" data-t="either"></small></div><input type="number" id="orders" inputmode="numeric" min="0" step="1" placeholder="0"></div>
       <div><div class="lbl"><span><span data-t="pallets"></span><span class="req qreq">*</span></span><small class="qhint" data-t="either"></small></div><input type="number" id="pallets" inputmode="numeric" min="0" step="1" placeholder="0"></div>
     </div>
   </div>
 
-  <div class="card nadm">
+  <div class="card nadm ndrop">
     <div class="lbl"><span><span data-t="photos"></span><span class="req">*</span></span><small data-t="photoHint"></small></div>
     <div class="photos" id="photos"></div>
     <input type="file" id="file" accept="image/*" capture="environment" multiple style="display:none">
   </div>
 
-  <div class="card">
+  <div class="card ndrop">
     <div class="lbl"><span><span data-t="exception"></span><span class="req admf-inl">*</span></span></div>
     <div class="chips" id="exc"></div>
     <textarea id="note" maxlength="500" style="margin-top:10px;display:none"></textarea>
@@ -160,6 +189,8 @@ body.admf .nadm{display:none!important}
 
 <main id="doneView" style="display:none"></main>
 
+<main id="tasksView" style="display:none"></main>
+
 <main id="historyView" style="display:none">
   <div class="ro" data-t="readonly" id="hRo"></div>
   <div id="hAdmin"></div>
@@ -172,6 +203,7 @@ body.admf .nadm{display:none!important}
 
 <div class="submit" id="submitBar"><button id="submit" data-t="submit"></button></div>
 <div class="amodal" id="amodal"><div class="box" id="amodalBox"></div></div>
+<div class="toast" id="toast"></div>
 <div class="overlay" id="overlay"><span id="overlayText"></span></div>
 
 <script>
@@ -188,13 +220,13 @@ const T = {
       excs:[['','无异常'],['晚到','晚到'],['车满/部分拒收','车满/部分拒收'],['货未齐','货未齐'],['车辆问题','车辆问题'],['其他','其他']],
       e_exc:'请选择异常类型',e_note_adm:'请填写备注',e_wh:'请选择仓库',e_carrier:'请选择服务商',e_trailer:'请填写 Trailer Number',e_arrived:'请填写到达时间',e_orders:'单量不能为负数',e_pallets:'板数不能为负数',e_pallets_req:'单量和板数至少填一项',either:'二选一',optional2:'选填',optional:'选填',e_photo:'请至少拍 1 张照片',e_reporter:'请填写填报人',e_note:'选择"其他"时请填写说明',
       uploading:'正在上传照片…',saving:'正在提交…',okTitle:'登记成功',again:'继续登记下一辆',dup:'这辆车已经登记过（同仓库、服务商、车厢号和到达时间），请勿重复提交。',
-      fail:'提交失败，请检查网络后重试：',tabForm:'登记',tabHistory:'历史记录',readonly:'只读：可查看本仓已提交的记录，不能修改。备注：若错误提交需要修改，请联系运配管理员。',fixNote:'备注：若错误提交需要修改，请联系运配管理员。',refresh:'刷新',hToday:'今天',hYesterday:'昨天',hAll:'大促全部（11/20–12/4）',hAllCarrier:'全部',hSearch:'搜索 Trailer / 填报人',hTrucks:'车',hOrders:'单',hPallets:'板',hNone:'没有记录',hVoid:'已作废',hPhotos:'张照片',hBy:'填报',hLoading:'加载中…',hErr:'查询失败：',hPickWh:'请先在「登记」页选择仓库',todayTitle:'今日本仓已登记',trucks:'车',none:'今天还没有登记',unitT:'按车',unitP:'按板',confirmDup:'今天这个 Trailer 已登记过，确定再次提交吗？再点一次提交确认。'},
+      fail:'提交失败，请检查网络后重试：',tabForm:'登记',tabTasks:'提货任务跟进',tabHistory:'历史记录',readonly:'只读：可查看本仓已提交的记录，不能修改。备注：若错误提交需要修改，请联系运配管理员。',fixNote:'备注：若错误提交需要修改，请联系运配管理员。',refresh:'刷新',hToday:'今天',hYesterday:'昨天',hAll:'大促全部（11/20–12/4）',hAllCarrier:'全部',hSearch:'搜索 Trailer / 填报人',hTrucks:'车',hOrders:'单',hPallets:'板',hNone:'没有记录',hVoid:'已作废',hPhotos:'张照片',hBy:'填报',hLoading:'加载中…',hErr:'查询失败：',hPickWh:'请先在「登记」页选择仓库',todayTitle:'今日本仓已登记',trucks:'车',none:'今天还没有登记',unitT:'按车',unitP:'按板',confirmDup:'今天这个 Trailer 已登记过，确定再次提交吗？再点一次提交确认。'},
   en:{title:'Pickup Check-in',wh:'Warehouse',carrier:'Carrier',trailer:'Trailer Number',trailerHint:'As shown on the trailer',arrived:'Arrival time',now:'Now',orders:'Orders handed over',pallets:'Pallets',photos:'Photos',photoHint:'Trailer no. / loading, up to 6',addPhoto:'Camera',exception:'Exception',notePh:'Describe the issue (optional)',reporter:'Your name',submit:'Submit',
       demo:'Demo mode: not connected to the database. Submissions are not saved.',
       excs:[['','None'],['晚到','Late'],['车满/部分拒收','Full / partial refusal'],['货未齐','Freight not ready'],['车辆问题','Vehicle issue'],['其他','Other']],
       e_exc:'Select an exception type',e_note_adm:'Please add a note',e_wh:'Select a warehouse',e_carrier:'Select a carrier',e_trailer:'Enter the trailer number',e_arrived:'Enter the arrival time',e_orders:'Orders cannot be negative',e_pallets:'Pallets cannot be negative',e_pallets_req:'Enter orders or pallets (at least one)',either:'either one',optional2:'optional',optional:'optional',e_photo:'Take at least 1 photo',e_reporter:'Enter your name',e_note:'Please describe "Other"',
       uploading:'Uploading photos…',saving:'Submitting…',okTitle:'Checked in',again:'Check in another truck',dup:'This truck was already submitted (same warehouse, carrier, trailer and time).',
-      fail:'Submit failed. Check your connection and retry: ',tabForm:'Check-in',tabHistory:'History',readonly:'Read-only: view this warehouse\'s submitted records. Note: if a record was submitted by mistake, contact the transport & distribution admin to correct it.',fixNote:'Note: if this was submitted by mistake, contact the transport & distribution admin to correct it.',refresh:'Refresh',hToday:'Today',hYesterday:'Yesterday',hAll:'Whole peak (11/20–12/4)',hAllCarrier:'All',hSearch:'Search trailer / name',hTrucks:'trucks',hOrders:'orders',hPallets:'pallets',hNone:'No records',hVoid:'Voided',hPhotos:'photos',hBy:'by',hLoading:'Loading…',hErr:'Query failed: ',hPickWh:'Select a warehouse on the Check-in tab first',todayTitle:'Checked in today at this warehouse',trucks:'trucks',none:'Nothing checked in yet today',unitT:'truck',unitP:'pallet',confirmDup:'This trailer was already checked in today. Tap Submit again to confirm.'},
+      fail:'Submit failed. Check your connection and retry: ',tabForm:'Check-in',tabTasks:'Pickup tasks',tabHistory:'History',readonly:'Read-only: view this warehouse\'s submitted records. Note: if a record was submitted by mistake, contact the transport & distribution admin to correct it.',fixNote:'Note: if this was submitted by mistake, contact the transport & distribution admin to correct it.',refresh:'Refresh',hToday:'Today',hYesterday:'Yesterday',hAll:'Whole peak (11/20–12/4)',hAllCarrier:'All',hSearch:'Search trailer / name',hTrucks:'trucks',hOrders:'orders',hPallets:'pallets',hNone:'No records',hVoid:'Voided',hPhotos:'photos',hBy:'by',hLoading:'Loading…',hErr:'Query failed: ',hPickWh:'Select a warehouse on the Check-in tab first',todayTitle:'Checked in today at this warehouse',trucks:'trucks',none:'Nothing checked in yet today',unitT:'truck',unitP:'pallet',confirmDup:'This trailer was already checked in today. Tap Submit again to confirm.'},
 };
 const store = { get(k,d){ try{ const v=localStorage.getItem('pk_'+k); return v==null?d:v; }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem('pk_'+k,v); }catch(e){} } };
 const params = new URLSearchParams(location.search);
@@ -220,6 +252,7 @@ function applyLang(){
   $('note').placeholder=t('notePh'); $('hQ').placeholder=t('hSearch'); if(S.tab==='history'){ renderHDate(); renderHistory(); }
   renderCarriers(); renderExc(); renderPhotos(); renderWhTitle(); renderToday();
   if($('orders')) qtyHint();
+  dropLang();
 }
 function whObj(){ return S.warehouses.find(w=>w.code===$('wh').value); }
 function renderWhTitle(){ const w=whObj(); $('whTitle').textContent = w ? `${w.code} · ${w.name}` : 'Peak 2026'; }
@@ -229,7 +262,10 @@ function renderWh(){
   if(S.warehouses.some(w=>w.code===pre)) $('wh').value=pre;
 }
 function renderCarriers(){
-  $('carriers').innerHTML = S.carriers.map(c=>`<div class="opt ${S.carrier===c.code?'on':''}" data-carrier="${esc(c.code)}">${esc(c.code)}</div>`).join('');
+  const w0=whObj(); const list=carriersFor(w0&&w0.code);
+  if(S.carrier && !list.some(c=>c.code===S.carrier)) S.carrier='';
+  $('carriers').innerHTML = list.map(c=>`<div class="opt ${S.carrier===c.code?'on':''}" data-carrier="${esc(c.code)}">${esc(c.code)}${c.drop?`<small>${L('甩柜','Drop trailer')}</small>`:''}</div>`).join('');
+  applyMode();
   const unit=(S.carriers.find(c=>c.code===S.carrier)||{}).unit;
 }
 function renderExc(){
@@ -273,6 +309,7 @@ const clientId = store.get('cid','') || (()=>{ const v=uuid(); store.set('cid',v
 function validate(){
   const w=whObj(); const unit=(S.carriers.find(c=>c.code===S.carrier)||{}).unit;
   if(!w) return 'e_wh'; if(!S.carrier) return 'e_carrier';
+  if(isDropSel() && !S.admin) return null;
   if(S.admin){ if(!$('arrived').value) return 'e_arrived'; if(!S.exc) return 'e_exc'; if(!$('note').value.trim()) return 'e_note_adm'; return null; }
   if(!$('trailer').value.trim()) return 'e_trailer'; if(!$('arrived').value) return 'e_arrived';
   if($('orders').value!=='' && +$('orders').value<0) return 'e_orders';
@@ -289,12 +326,13 @@ async function submit(){
   const v=validate(); if(v){ $('err').textContent=t(v); $('err').scrollIntoView({block:'center',behavior:'smooth'}); return; }
   const w=whObj();
   if(S.admin) return submitAdmin(w);
+  if(isDropSel()) return submitDrop(w);
   const trailer=$('trailer').value.trim().toUpperCase().replace(/\s+/g,'');
   // 同日同 trailer 已登记：二次确认
-  if(S.today && !S.dupConfirm){ const hit=(S.today.rows||[]).find(r=>r.carrier===S.carrier&&(r.trailers||[]).some(x=>x.toUpperCase()===trailer)); if(hit){ S.dupConfirm=true; $('err').textContent=t('confirmDup'); return; } }
+  if(S.today && !S.dupConfirm){ const hit=(S.today.rows||[]).find(r=>r.carrier===baseOf(S.carrier)&&(r.trailers||[]).some(x=>x.toUpperCase()===trailer)); if(hit){ S.dupConfirm=true; $('err').textContent=t('confirmDup'); return; } }
   const arrived=new Date($('arrived').value);
   const day=localDateIn(w.tz, arrived);
-  const row={ date:day, warehouse:w.code, carrier:S.carrier, trailer_no:trailer, arrived_at:arrived.toISOString(),
+  const row={ date:day, warehouse:w.code, carrier:baseOf(S.carrier), trailer_no:trailer, arrived_at:arrived.toISOString(),
     orders: $('orders').value===''?null:+$('orders').value, pallets: $('pallets').value===''?null:+$('pallets').value,
     exception_type: S.exc||null, note: S.exc ? ($('note').value.trim()||null) : null,
     reporter: $('reporter').value.trim(), photo_paths:[], client_id: clientId };
@@ -304,7 +342,7 @@ async function submit(){
     if(LIVE){
       overlay(t('uploading'));
       for(const p of S.photos){
-        const path=`${w.code}/${day}/${S.carrier}_${trailer}_${uuid().slice(0,8)}.jpg`;
+        const path=`${w.code}/${day}/${row.carrier}_${trailer}_${uuid().slice(0,8)}.jpg`;
         const { error } = await sb.storage.from('pickup-photos').upload(path, p.blob, {contentType:'image/jpeg', upsert:false});
         if(error) throw error; row.photo_paths.push(path);
       }
@@ -319,7 +357,7 @@ async function submit(){
 // 管理员报备：只登记异常，不算车（kind='admin'），无照片/Trailer/单量
 async function submitAdmin(w){
   const arrived=new Date($('arrived').value); const day=localDateIn(w.tz, arrived);
-  const row={ date:day, warehouse:w.code, carrier:S.carrier, trailer_no:'ADMIN-'+uuid().replace(/-/g,'').slice(0,8).toUpperCase(), arrived_at:arrived.toISOString(),
+  const row={ date:day, warehouse:w.code, carrier:baseOf(S.carrier), sub_carrier:carrierInfo(S.carrier).sub||null, trailer_no:'ADMIN-'+uuid().replace(/-/g,'').slice(0,8).toUpperCase(), arrived_at:arrived.toISOString(),
     orders:null, pallets:null, exception_type:S.exc, note:$('note').value.trim(), reporter:(S.adminEmail||'admin').split('@')[0],
     photo_paths:[], client_id:clientId, kind:'admin' };
   store.set('wh',w.code); $('submit').disabled=true;
@@ -357,7 +395,7 @@ $('file').onchange=async e=>{
   for(const f of files){ const blob=await compress(f); S.photos.push({blob, url:URL.createObjectURL(blob)}); }
   renderPhotos();
 };
-$('wh').onchange=()=>{ store.set('wh',$('wh').value); renderWhTitle(); renderToday(); };
+$('wh').onchange=()=>{ store.set('wh',$('wh').value); renderWhTitle(); renderToday(); renderCarriers(); };
 $('trailer').oninput=()=>{ S.dupConfirm=false; };
 $('nowBtn').onclick=()=>{ $('arrived').value=localInputValue(new Date()); };
 $('submit').onclick=submit;
@@ -380,7 +418,7 @@ async function loadHistory(){
   if(!LIVE){ S.hRows=S.demoRows.filter(r=>r.warehouse===w.code&&r.date>=from&&r.date<=to); return renderHistory(); }
   $('hList').innerHTML=`<div class="empty" style="text-align:center;color:var(--ink3);padding:20px">${t('hLoading')}</div>`;
   const { data, error } = S.admin
-    ? await sbA.from('pickups').select('id,date,arrived_at,carrier,trailer_no,orders,pallets,exception_type,note,reporter,photo_paths,voided,void_reason,created_at,kind').eq('warehouse',w.code).gte('date',from).lte('date',to).order('arrived_at',{ascending:false}).limit(1000)
+    ? await sbA.from('pickups').select('id,date,arrived_at,carrier,trailer_no,orders,pallets,exception_type,note,reporter,photo_paths,voided,void_reason,created_at,kind,sub_carrier,dock,drop_status,loaded_at,picked_at,est_qty,est_unit').eq('warehouse',w.code).gte('date',from).lte('date',to).order('arrived_at',{ascending:false}).limit(1000)
     : await sb.rpc('wh_history',{p_wh:w.code,p_from:from,p_to:to,p_carrier:null});
   if(S.admin && data) data.forEach(r=>{ r.photo_count=(r.photo_paths||[]).length; });
   if(error){ $('hList').innerHTML=`<div class="err">${t('hErr')}${esc(error.message)}</div>`; S.hRows=[]; return; }
@@ -395,9 +433,10 @@ function renderHistory(){
   const w=whObj();
   const fmtT=r=>{ const d=new Date(r.arrived_at); return new Intl.DateTimeFormat(lang==='zh'?'zh-CN':'en-US',{timeZone:(w&&w.tz)||undefined,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(d); };
   $('hList').innerHTML = rows.length ? rows.map(r=>`<div class="rec ${r.voided?'void':''}">
-      <div class="h"><span class="tr">${r.kind==='admin'?'管理员报备':esc(r.trailer_no)}</span><span><span class="pill c">${esc(r.carrier)}</span>${r.voided?` <span class="pill">${t('hVoid')}</span>`:''}</span></div>
+      <div class="h"><span class="tr">${r.kind==='admin'?'管理员报备':esc(r.trailer_no)}</span><span>${r.drop_status?dChip(r)+' ':''}<span class="pill c">${esc(dispCarrier(r))}</span>${r.voided?` <span class="pill">${t('hVoid')}</span>`:''}</span></div>
       <div class="m"><span>${fmtT(r)}</span>${r.kind==='admin'?'<span>不计车</span>':`<span>${t('orders')} ${r.orders??'—'}</span>${r.pallets!=null?`<span>${t('pallets')} ${r.pallets}</span>`:''}<span>${r.photo_count||0} ${t('hPhotos')}</span>`}<span>${t('hBy')} ${esc(r.reporter)}</span></div>
       ${r.exception_type?`<div class="m"><span class="pill x">${esc(r.exception_type)}</span>${r.note?`<span>${esc(r.note)}</span>`:''}</div>`:''}
+      ${r.drop_status&&!r.voided?dHist(r):''}
       ${S.admin?`<div class="ract"><button data-aedit="${r.id}">修改</button><button class="r" data-adel="${r.id}">删除</button></div>`:''}
     </div>`).join('') : `<div style="text-align:center;color:var(--ink3);padding:24px">${t('hNone')}</div>`;
 }
@@ -493,11 +532,13 @@ function setTab(tab){
   S.tab=tab;
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
   const isForm=tab==='form';
-  $('historyView').style.display=isForm?'none':'';
+  $('historyView').style.display=tab==='history'?'':'none';
+  $('tasksView').style.display=tab==='tasks'?'':'none';
   $('doneView').style.display='none';
   $('formView').style.display=isForm?'':'none';
   $('submitBar').style.display=isForm?'':'none';
-  if(!isForm){ renderHDate(); checkAdmin().finally(loadHistory); }
+  if(tab==='history'){ renderHDate(); checkAdmin().finally(loadHistory); }
+  if(tab==='tasks'){ renderDrops(); loadDrops(); }
   window.scrollTo(0,0);
 }
 document.addEventListener('click', e=>{
@@ -522,6 +563,176 @@ async function boot(){
   checkAdmin();
 }
 ['orders','pallets'].forEach(id=>$(id).addEventListener('input',qtyHint));
+
+// ================= LAX5 甩柜（FedEx NC / C / Mixed）：开始装载 → 完成装货 → 确认已提 =================
+// 只对 ONT-LG-5-US 生效；其他仓库服务商列表和「一车一填」完全不变。
+// 数据仍记在 pickups：carrier='FedEx Ground' + sub_carrier（NC/C/Mixed），开始装载即算一车。
+const DROP_WH='ONT-LG-5-US', DROP_BASE='FedEx Ground', DROP_SUBS=['NC','C','Mixed'], LOAD_MIN=40, WAIT_WARN=120;
+const L=(zh,en)=>lang==='zh'?zh:en;
+function carriersFor(code){
+  if(code!==DROP_WH) return S.carriers;
+  return DROP_SUBS.map(s=>({code:'FedEx '+s, base:DROP_BASE, sub:s, drop:true}))
+    .concat(S.carriers.filter(c=>c.code!=='FedEx Ground'&&c.code!=='FedEx Express'));
+}
+function carrierInfo(code){ const w=whObj(); return carriersFor(w&&w.code).find(c=>c.code===code) || {code, base:code}; }
+const baseOf=code=>carrierInfo(code).base||code;
+const isDropSel=()=>{ const w=whObj(); return !!(w&&w.code===DROP_WH&&carrierInfo(S.carrier).drop); };
+const dispCarrier=r=>r.sub_carrier?('FedEx '+r.sub_carrier):r.carrier;
+function applyMode(){
+  const w=whObj(), lax5=!!(w&&w.code===DROP_WH), drop=isDropSel()&&!S.admin;
+  document.body.classList.toggle('dropf', drop);
+  $('arrLbl').textContent = drop ? L('开始装载时间','Loading start time') : t('arrived');
+  $('submit').textContent = drop ? L('提交 · 开始装载','Submit · start loading') : t('submit');
+  $('tabTasks').style.display = lax5 ? '' : 'none';
+  if(!lax5 && S.tab==='tasks') setTab('form');
+  if(lax5){ if(S.dropWh!==w.code){ S.dropWh=w.code; loadDrops(); } } else { S.dropWh=null; S.drops=[]; renderDrops(); renderDropRemind(); }
+}
+const tzOf=()=>{ const w=whObj(); return (w&&w.tz)||'America/Los_Angeles'; };
+const hm=ts=>new Intl.DateTimeFormat('en-GB',{timeZone:tzOf(),hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts));
+const md2=ts=>new Intl.DateTimeFormat('en-US',{timeZone:tzOf(),month:'numeric',day:'numeric'}).format(new Date(ts));
+const dState=r=>r.drop_status==='picked'?'done':r.drop_status==='ready'?'wait':'load';
+const etaOf=r=>new Date(r.arrived_at).getTime()+LOAD_MIN*60000;
+const waitMin=r=>dState(r)==='wait'&&r.loaded_at?Math.round((Date.now()-new Date(r.loaded_at))/60000):0;
+const isLate=r=>dState(r)==='load'&&Date.now()>etaOf(r);
+const isStale=r=>waitMin(r)>WAIT_WARN;
+function dChip(r){ const s=dState(r);
+  if(s==='done') return `<span class="dchip done">${L('已提 · 闭环','Picked up · closed')}</span>`;
+  if(s==='wait') return `<span class="dchip ${isStale(r)?'late':'wait'}">${isStale(r)?L('待提超 2 小时','Waiting > 2h'):L('待提货','Awaiting pickup')} · Dock ${esc(r.dock)}</span>`;
+  return `<span class="dchip ${isLate(r)?'late':'load'}">${isLate(r)?L('装载超时','Loading overdue'):L('装载中','Loading')}</span>`; }
+function dSteps(r){ const s=dState(r); const cell=(n,ts,c)=>`<div class="${c}"><i></i>${n}<time>${ts?hm(ts):'—'}</time></div>`;
+  return `<div class="steps">${cell(L('装载中','Loading'),r.arrived_at,s==='load'?'cur':'ok')}${cell(L('待提货','Awaiting'),r.loaded_at,s==='wait'?'cur':s==='done'?'ok':'')}${cell(L('已提','Picked'),r.picked_at,s==='done'?'ok':'')}</div>`; }
+function dEta(r){ const s=dState(r);
+  if(s==='done') return `<div class="eta">${L('用时','Took')} <b>${Math.round((new Date(r.picked_at)-new Date(r.arrived_at))/60000)} ${L('分钟','min')}</b></div>`;
+  if(s==='wait') return `<div class="eta"><span>${L('已装完','Loaded')} <b>${waitMin(r)} ${L('分钟','min')}</b>${L('，等待司机提走',' ago, waiting for pickup')}</span>${isStale(r)?`<span class="late">${L('柜子还在吗？拉走了请点「确认已提」','Still here? If it left, tap "Confirm picked up"')}</span>`:''}</div>`;
+  const left=Math.round((etaOf(r)-Date.now())/60000);
+  return `<div class="eta">${L('预计装完','ETA')} <b>${hm(etaOf(r))}</b><span class="${left<0?'late':''}">${left<0?L(`已超时 ${-left} 分钟`,`${-left} min overdue`):L(`还剩 ${left} 分钟`,`${left} min left`)}</span></div>`; }
+function dAct(r){ const s=dState(r);
+  if(s==='load') return `<button class="dbtn amber" data-dload="${r.id}">${L('完成装货 · 等待提货','Loading done · await pickup')}</button>`;
+  if(s==='wait') return `<button class="dbtn green" data-dpick="${r.id}">${L('确认已提 · 任务闭环','Confirm picked up · close')}</button>`;
+  return ''; }
+function dQty(r){ const a=r.pallets!=null?`${r.pallets} ${L('板','plt')}`:r.orders!=null?`${r.orders} ${L('单','orders')}`:null;
+  return a?` · ${L('实际','actual')} ${a}`:(r.est_qty!=null?` · ${L('预计','est.')} ${r.est_qty} ${r.est_unit==='单'?L('单','orders'):L('板','plt')}`:''); }
+function dCard(r){ return `<div class="card task ${dState(r)}"><div class="th"><div><div class="tr">${esc(r.trailer_no)}</div><div class="sub">${esc(dispCarrier(r))} · Dock ${esc(r.dock)}${dQty(r)}${r.reporter?` · ${esc(r.reporter)}`:''}</div></div>${dChip(r)}</div>${dSteps(r)}${dEta(r)}${dAct(r)}</div>`; }
+async function loadDrops(){
+  const w=whObj(); if(!w||w.code!==DROP_WH||!LIVE) return;
+  const { data, error } = await sb.rpc('drop_open',{p_wh:w.code});
+  if(!error) S.drops=data||[];
+  renderDrops(); renderDropRemind();
+}
+function renderDrops(){
+  const open=(S.drops||[]).slice(); const pri=r=>isStale(r)?2:isLate(r)?1:0;
+  open.sort((a,b)=>(pri(b)-pri(a))||(new Date(a.arrived_at)-new Date(b.arrived_at)));
+  $('openCnt').textContent=open.length||''; $('openCnt').style.display=open.length?'':'none';
+  $('openCnt').classList.toggle('hot', open.some(r=>isStale(r)||isLate(r)));
+  if(S.tab!=='tasks') return;
+  $('tasksView').innerHTML = `<div class="hrow"><div class="ro" style="flex:1;margin:0">${L(`本仓未闭环的甩柜任务 ${open.length} 个 · 装载超过 ${LOAD_MIN} 分钟、待提超过 2 小时标红`,`${open.length} open drop-trailer tasks · red = loading > ${LOAD_MIN} min or waiting > 2h`)}</div><button class="chip" id="dRefresh" style="flex:none">${t('refresh')}</button></div>`
+    + (open.length ? open.map(dCard).join('') : `<div class="card" style="text-align:center;color:var(--ink3)">${L('没有进行中的提货任务','No open pickup tasks')}</div>`);
+}
+function renderDropRemind(){
+  const w=whObj(); const st=(S.drops||[]).filter(r=>dState(r)==='wait');
+  $('dropRemind').innerHTML = (w&&w.code===DROP_WH&&st.length) ? `<div class="remind"><b>${L(`有 ${st.length} 个柜子装完了，还没确认已提`,`${st.length} loaded trailer(s) not yet confirmed as picked up`)}</b><ul>${st.map(r=>`<li>Dock ${esc(r.dock)} · ${esc(r.trailer_no)} · ${L(`已等 ${waitMin(r)} 分钟`,`waiting ${waitMin(r)} min`)}${isStale(r)?L('（超 2 小时）',' (> 2h)'):''}</li>`).join('')}</ul><div style="font-size:12px;color:var(--ink2);margin-bottom:8px">${L('柜子被拉走后请点「确认已提」，任务才闭环','Tap "Confirm picked up" once the trailer leaves to close the task')}</div><button class="dbtn amber" id="goTasks">${L('去确认已提','Go confirm')}</button></div>` : '';
+}
+function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove('show'),2200); }
+// 开始装载（甩柜提交）
+async function submitDrop(w){
+  const trailer=$('trailer').value.trim().toUpperCase().replace(/\s+/g,''), dock=$('dock').value.trim().toUpperCase();
+  if(!trailer) return $('err').textContent=t('e_trailer');
+  if(!dock) return $('err').textContent=L('请填写 Dock 口','Enter the dock');
+  if(!$('arrived').value) return $('err').textContent=t('e_arrived');
+  if(!$('reporter').value.trim()) return $('err').textContent=t('e_reporter');
+  await loadDrops();
+  const busy=(S.drops||[]).find(r=>String(r.dock).toUpperCase()===dock);
+  if(busy && !S.dockOk){
+    const s=dState(busy);
+    amodal(`<h3 style="margin:2px 0 6px">${L(`Dock ${esc(dock)} 上还有一个柜子没闭环`,`Dock ${esc(dock)} still has an open trailer`)}</h3>
+      <div class="cf"><div class="kv"><span>Trailer</span><b class="trailer" style="font-size:18px">${esc(busy.trailer_no)}</b><span>${t('carrier')}</span><b>${esc(dispCarrier(busy))}</b><span>${L('状态','Status')}</span><b>${s==='wait'?L(`待提货（已等 ${waitMin(busy)} 分钟）`,`Awaiting pickup (${waitMin(busy)} min)`):L('装载中','Loading')}</b></div></div>
+      <div style="font-size:13px;color:var(--ink2);margin-bottom:10px">${L('新柜子要用这个 Dock，说明上一个应该已经拉走了。','A new trailer at this dock means the previous one should be gone.')}</div>
+      ${s==='wait'?`<button class="btn2 dark" id="dkPicked" style="background:#1f8a4c;border-color:#1f8a4c">${L(`${esc(busy.trailer_no)} 已提走，闭环后开始新任务`,`${esc(busy.trailer_no)} has left — close it and start`)}</button>`:''}
+      <button class="btn2" id="dkBack">${L('还没走，换个 Dock','Not yet — use another dock')}</button>`);
+    $('dkBack').onclick=()=>{ amodalClose(); $('dock').focus(); };
+    if($('dkPicked')) $('dkPicked').onclick=async()=>{ const r=await sb.rpc('drop_mark_picked',{p_id:busy.id}); if(r.error||!['ok','already'].includes(r.data)){ toast(L('操作失败：','Failed: ')+(r.error?r.error.message:r.data)); return; } amodalClose(); S.dockOk=true; try{ await submitDrop(w); } finally{ S.dockOk=false; } };
+    return;
+  }
+  if(S.today && !S.dupConfirm){ const hit=(S.today.rows||[]).find(r=>r.carrier===DROP_BASE&&(r.trailers||[]).some(x=>x.toUpperCase()===trailer)); if(hit){ S.dupConfirm=true; $('err').textContent=t('confirmDup'); return; } }
+  const start=new Date($('arrived').value), day=localDateIn(w.tz,start), info=carrierInfo(S.carrier), q=$('estQty').value;
+  const row={ date:day, warehouse:w.code, carrier:DROP_BASE, sub_carrier:info.sub, trailer_no:trailer, dock, drop_status:'loading', arrived_at:start.toISOString(),
+    est_qty:q===''?null:Math.max(0,Math.round(+q)), est_unit:S.estUnit||'板', orders:null, pallets:null, exception_type:null, note:null,
+    reporter:$('reporter').value.trim(), photo_paths:[], client_id:clientId };
+  store.set('wh',w.code); store.set('reporter',row.reporter); $('submit').disabled=true;
+  try{ overlay(t('saving'));
+    const { error } = await sb.from('pickups').insert(row); if(error) throw error;
+    overlay(''); $('trailer').value=''; $('dock').value=''; $('estQty').value=''; S.dupConfirm=false;
+    toast(L(`任务已开始，预计 ${hm(start.getTime()+LOAD_MIN*60000)} 装完`,`Task started, ETA ${hm(start.getTime()+LOAD_MIN*60000)}`));
+    renderToday(); setTab('tasks');
+  }catch(err){ overlay(''); $('err').textContent=t('fail')+(err.message||err); }
+  finally{ $('submit').disabled=false; }
+}
+// 完成装货：复查 Trailer / 服务商 / Dock + 实际数量 + 照片（必填）
+function openLoad(id){
+  const r=(S.drops||[]).concat(S.hRows||[]).find(x=>x.id===id); if(!r) return;
+  const ph=[];
+  amodal(`<h3 style="margin:2px 0 4px">${L('完成装货前请复查','Check before marking loaded')}</h3><div style="font-size:12px;color:var(--ink2)">${L(`核对无误后再确认，确认后变成「待提货 · Dock ${esc(r.dock)}」`,`After confirming it becomes "Awaiting pickup · Dock ${esc(r.dock)}"`)}</div>
+    <div class="cf"><div class="kv"><span>Trailer</span><b class="trailer" style="font-size:18px">${esc(r.trailer_no)}</b><span>${t('carrier')}</span><b>${esc(dispCarrier(r))}</b><span>Dock</span><b>${esc(r.dock)}</b></div></div>
+    <label>${L('实际装车数量','Actual quantity loaded')}（${L('预计','est.')} ${r.est_qty==null?'—':r.est_qty+' '+(r.est_unit||'板')}）</label>
+    <div class="g2"><input id="lQty" type="number" min="0" step="1" inputmode="numeric" value="${r.est_qty??''}"><select id="lUnit"><option value="板" ${r.est_unit!=='单'?'selected':''}>${L('板','Pallets')}</option><option value="单" ${r.est_unit==='单'?'selected':''}>${L('单','Orders')}</option></select></div>
+    <label>${L('装车照片（必填，至少 1 张：车厢内货物、Trailer 号）','Loading photos (required: cargo inside, trailer no.)')}</label>
+    <div class="photos" id="lPhs" style="margin-top:6px"></div><input type="file" id="lFile" accept="image/*" capture="environment" multiple style="display:none">
+    <label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink);margin-top:12px"><input type="checkbox" id="lOk" style="width:auto;margin:0">${L('我已核对 Trailer 号、服务商和数量','I have checked trailer, carrier and quantity')}</label>
+    <div class="e" id="lErr"></div><button class="btn2 dark" id="lGo" style="background:#d98a00;border-color:#d98a00">${L('确认完成装货','Confirm loaded')}</button><button class="btn2" id="lCancel">${L('返回','Back')}</button>`);
+  const draw=()=>{ $('lPhs').innerHTML=ph.map((p,i)=>`<div class="ph"><img src="${p.url}" alt=""><button data-ldel="${i}">×</button></div>`).join('')+(ph.length<6?`<div class="add" id="lAdd"><b>＋</b>${t('addPhoto')}</div>`:''); };
+  draw();
+  $('lPhs').onclick=e=>{ const d=e.target.closest('[data-ldel]'); if(d){ ph.splice(+d.dataset.ldel,1); draw(); return; } if(e.target.closest('#lAdd')) $('lFile').click(); };
+  $('lFile').onchange=async e=>{ const fs=[...e.target.files].slice(0,6-ph.length); e.target.value=''; for(const f of fs){ const b=await compress(f); ph.push({blob:b,url:URL.createObjectURL(b)}); } draw(); };
+  $('lCancel').onclick=amodalClose;
+  $('lGo').onclick=async()=>{
+    const q=$('lQty').value; $('lErr').textContent='';
+    if(q===''||+q<0) return $('lErr').textContent=L('请填写实际数量','Enter the actual quantity');
+    if($('lUnit').value==='板' && +q>200) return $('lErr').textContent=L('板数不能超过 200','Pallets cannot exceed 200');
+    if(!ph.length) return $('lErr').textContent=L('请至少拍 1 张照片','Add at least 1 photo');
+    if(!$('lOk').checked) return $('lErr').textContent=L('请勾选已核对','Please tick the check box');
+    $('lGo').disabled=true;
+    try{ const w=whObj(); const paths=[];
+      for(const p of ph){ const path=`${w.code}/${r.date}/FedEx-${r.sub_carrier||'G'}_${r.trailer_no}_${uuid().slice(0,8)}.jpg`;
+        const { error } = await sb.storage.from('pickup-photos').upload(path,p.blob,{contentType:'image/jpeg',upsert:false}); if(error) throw error; paths.push(path); }
+      const res=await sb.rpc('drop_mark_loaded',{p_id:r.id,p_qty:Math.round(+q),p_unit:$('lUnit').value,p_photos:paths});
+      if(res.error) throw res.error; if(res.data!=='ok') throw new Error(res.data==='already'?L('这个任务已经完成装货了','Already marked loaded'):res.data);
+      amodalClose(); toast(L(`${r.trailer_no} 已装完，待提货 · Dock ${r.dock}`,`${r.trailer_no} loaded, awaiting pickup · Dock ${r.dock}`));
+      await loadDrops(); if(S.tab==='history') loadHistory();
+    }catch(err){ $('lErr').textContent=t('fail')+(err.message||err); }
+    finally{ if($('lGo')) $('lGo').disabled=false; }
+  };
+}
+function openPick(id){
+  const r=(S.drops||[]).concat(S.hRows||[]).find(x=>x.id===id); if(!r) return;
+  amodal(`<h3 style="margin:2px 0 6px">${L('确认这个柜子已经被拉走？','Confirm this trailer has been picked up?')}</h3>
+    <div class="cf"><div class="kv"><span>Trailer</span><b class="trailer" style="font-size:18px">${esc(r.trailer_no)}</b><span>${t('carrier')}</span><b>${esc(dispCarrier(r))}</b><span>Dock</span><b>${esc(r.dock)}</b></div></div>
+    <div class="e" id="pErr"></div><button class="btn2 dark" id="pGo" style="background:#1f8a4c;border-color:#1f8a4c">${L('确认已提 · 任务闭环','Confirm picked up · close')}</button><button class="btn2" id="pCancel">${L('返回','Back')}</button>`);
+  $('pCancel').onclick=amodalClose;
+  $('pGo').onclick=async()=>{ $('pGo').disabled=true;
+    const res=await sb.rpc('drop_mark_picked',{p_id:r.id});
+    if(res.error||!['ok','already'].includes(res.data)){ $('pErr').textContent=t('fail')+(res.error?res.error.message:res.data); $('pGo').disabled=false; return; }
+    amodalClose(); toast(L(`${r.trailer_no} 已提走，任务闭环`,`${r.trailer_no} picked up, task closed`)); await loadDrops(); if(S.tab==='history') loadHistory(); };
+}
+document.addEventListener('click', e=>{
+  const a=e.target.closest('[data-dload]'); if(a) return openLoad(a.dataset.dload);
+  const p=e.target.closest('[data-dpick]'); if(p) return openPick(p.dataset.dpick);
+  if(e.target.id==='goTasks') return setTab('tasks');
+  if(e.target.id==='dRefresh') return loadDrops();
+  const u=e.target.closest('[data-eu]'); if(u){ S.estUnit=u.dataset.eu; document.querySelectorAll('[data-eu]').forEach(x=>x.classList.toggle('on',x===u)); }
+});
+setInterval(()=>{ renderDrops(); renderDropRemind(); }, 30000);
+setInterval(()=>{ if(!document.hidden) loadDrops(); }, 90000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadDrops(); });
+function dHist(r){
+  return `<div class="m"><span>Dock ${esc(r.dock)}</span><span>${L('开始','Start')} ${hm(r.arrived_at)}</span><span>${L('装完','Loaded')} ${r.loaded_at?hm(r.loaded_at):'—'}</span><span>${L('已提','Picked')} ${r.picked_at?hm(r.picked_at):'—'}</span>${r.est_qty!=null?`<span>${L('预计','est.')} ${r.est_qty} ${esc(r.est_unit||'')}</span>`:''}</div>${r.drop_status!=='picked'?`<div style="margin-top:8px">${dAct(r)}</div>`:''}`;
+}
+function dropLang(){
+  $('estLbl').textContent=L('预计货量','Estimated volume'); $('estHint').textContent=L('选填','optional');
+  $('euP').textContent=L('板','Pallets'); $('euO').textContent=L('单','Orders'); $('dockLbl').textContent=L('Dock 口','Dock');
+  $('dropFlow').innerHTML=`<div class="flow"><b>① ${L('装载中','Loading')}</b>→<b>② ${L('待提货','Awaiting pickup')}</b>→<b>③ ${L('已提（闭环）','Picked up (closed)')}</b></div><div style="font-size:12px;color:var(--ink2);margin-top:8px">${L(`提交即开始装载任务，预计 ${LOAD_MIN} 分钟装完。完成装货、确认已提在「提货任务跟进」里操作。`,`Submitting starts a loading task (ETA ${LOAD_MIN} min). Mark loaded / picked up under "Pickup tasks".`)}</div>`;
+  applyMode(); renderDrops(); renderDropRemind();
+}
+
 boot();
 </script>
 </body>
