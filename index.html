@@ -923,7 +923,8 @@ const isHo = (wh,c) => HO_COMBOS.has(wh+'|'+c);
 function subLine(w,c,p){
   if(!(w==='ONT-LG-5-US'&&c==='FedEx Ground') && !p.some(r=>r.sub_carrier)) return '';
   const n=k=>p.filter(r=>r.sub_carrier===k).length, other=p.filter(r=>!r.sub_carrier).length;
-  return `<div class="o" style="font-size:11px">NC ${n('NC')} · C ${n('C')} · Mixed ${n('Mixed')}${other?` · 未分类 ${other}`:''} 辆</div>`;
+  const tag=(k,v)=>`<span style="background:#ffffffc0;border:1px solid #0f172a14;border-radius:5px;padding:0 5px;white-space:nowrap">${k} <b>${v}</b></span>`;
+  return `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;font-size:11px;line-height:17px;color:var(--ink2)">${tag('NC',n('NC'))}${tag('C',n('C'))}${tag('Mixed',n('Mixed'))}${other?tag('未分类',other):''}</div>`;
 }
 function pkRows(dates){ const ds=new Set(dates||datesInScope());
   const man=S.pickups.filter(r=>!r.voided&&r.kind!=='admin'&&ds.has(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse)&&!hoOf(r.warehouse,r.carrier,r.date));
