@@ -561,13 +561,14 @@ async function boot(){
   $('reporter').value=store.get('reporter','');
   applyLang();
   checkAdmin();
+  if(params.get('tab')==='tasks' && whObj() && whObj().code===DROP_WH) setTab('tasks');
 }
 ['orders','pallets'].forEach(id=>$(id).addEventListener('input',qtyHint));
 
 // ================= LAX5 甩柜（FedEx NC / C / Mixed）：开始装载 → 完成装货 → 确认已提 =================
 // 只对 ONT-LG-5-US 生效；其他仓库服务商列表和「一车一填」完全不变。
 // 数据仍记在 pickups：carrier='FedEx Ground' + sub_carrier（NC/C/Mixed），开始装载即算一车。
-const DROP_WH='ONT-LG-5-US', DROP_BASE='FedEx Ground', DROP_SUBS=['NC','C','Mixed'], LOAD_MIN=40, WAIT_WARN=120;
+const DROP_WH='ONT-LG-5-US', DROP_BASE='FedEx Ground', DROP_SUBS=['NC','C','Mixed'], LOAD_MIN=40, LOAD_MAX=60, WAIT_WARN=120, HOLD_HOUR=16;
 const L=(zh,en)=>lang==='zh'?zh:en;
 function carriersFor(code){
   if(code!==DROP_WH) return S.carriers;
@@ -591,21 +592,28 @@ const tzOf=()=>{ const w=whObj(); return (w&&w.tz)||'America/Los_Angeles'; };
 const hm=ts=>new Intl.DateTimeFormat('en-GB',{timeZone:tzOf(),hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts));
 const md2=ts=>new Intl.DateTimeFormat('en-US',{timeZone:tzOf(),month:'numeric',day:'numeric'}).format(new Date(ts));
 const dState=r=>r.drop_status==='picked'?'done':r.drop_status==='ready'?'wait':'load';
-const etaOf=r=>new Date(r.arrived_at).getTime()+LOAD_MIN*60000;
+const etaOf=r=>new Date(r.arrived_at).getTime()+LOAD_MAX*60000;
+const eta0=r=>new Date(r.arrived_at).getTime()+LOAD_MIN*60000;
+const hourIn=ts=>+new Intl.DateTimeFormat('en-GB',{timeZone:tzOf(),hour:'2-digit',hour12:false}).format(new Date(ts));
+const dayIn=ts=>new Intl.DateTimeFormat('en-CA',{timeZone:tzOf()}).format(new Date(ts));
+// 可能留柜：16:00 以后开始装、或前一天开始装，超过 1 小时还没完成装货 → 不算超时
+const isHeld=r=>dState(r)==='load'&&Date.now()>etaOf(r)&&(hourIn(r.arrived_at)>=HOLD_HOUR||dayIn(r.arrived_at)<dayIn(Date.now()));
 const waitMin=r=>dState(r)==='wait'&&r.loaded_at?Math.round((Date.now()-new Date(r.loaded_at))/60000):0;
-const isLate=r=>dState(r)==='load'&&Date.now()>etaOf(r);
+const isLate=r=>dState(r)==='load'&&Date.now()>etaOf(r)&&!isHeld(r);
 const isStale=r=>waitMin(r)>WAIT_WARN;
 function dChip(r){ const s=dState(r);
   if(s==='done') return `<span class="dchip done">${L('已提 · 闭环','Picked up · closed')}</span>`;
   if(s==='wait') return `<span class="dchip ${isStale(r)?'late':'wait'}">${isStale(r)?L('待提超 2 小时','Waiting > 2h'):L('待提货','Awaiting pickup')} · Dock ${esc(r.dock)}</span>`;
+  if(isHeld(r)) return `<span class="dchip done">${L('可能留柜 · 次日继续装','Held · continue tomorrow')}</span>`;
   return `<span class="dchip ${isLate(r)?'late':'load'}">${isLate(r)?L('装载超时','Loading overdue'):L('装载中','Loading')}</span>`; }
 function dSteps(r){ const s=dState(r); const cell=(n,ts,c)=>`<div class="${c}"><i></i>${n}<time>${ts?hm(ts):'—'}</time></div>`;
   return `<div class="steps">${cell(L('装载中','Loading'),r.arrived_at,s==='load'?'cur':'ok')}${cell(L('待提货','Awaiting'),r.loaded_at,s==='wait'?'cur':s==='done'?'ok':'')}${cell(L('已提','Picked'),r.picked_at,s==='done'?'ok':'')}</div>`; }
 function dEta(r){ const s=dState(r);
   if(s==='done') return `<div class="eta">${L('用时','Took')} <b>${Math.round((new Date(r.picked_at)-new Date(r.arrived_at))/60000)} ${L('分钟','min')}</b></div>`;
   if(s==='wait') return `<div class="eta"><span>${L('已装完','Loaded')} <b>${waitMin(r)} ${L('分钟','min')}</b>${L('，等待司机提走',' ago, waiting for pickup')}</span>${isStale(r)?`<span class="late">${L('柜子还在吗？拉走了请点「确认已提」','Still here? If it left, tap "Confirm picked up"')}</span>`:''}</div>`;
+  if(isHeld(r)) return `<div class="eta"><span>${md2(r.arrived_at)} ${hm(r.arrived_at)} ${L('开始，可能留柜到次日继续装','started, likely held to continue tomorrow')}</span><span>${L('装完请点「完成装货」','Tap "Loading done" when finished')}</span></div>`;
   const left=Math.round((etaOf(r)-Date.now())/60000);
-  return `<div class="eta">${L('预计装完','ETA')} <b>${hm(etaOf(r))}</b><span class="${left<0?'late':''}">${left<0?L(`已超时 ${-left} 分钟`,`${-left} min overdue`):L(`还剩 ${left} 分钟`,`${left} min left`)}</span></div>`; }
+  return `<div class="eta">${L('预计装完','ETA')} <b>${hm(eta0(r))}–${hm(etaOf(r))}</b><span class="${left<0?'late':''}">${left<0?L(`已超时 ${-left} 分钟`,`${-left} min overdue`):L(`还剩 ${left} 分钟`,`${left} min left`)}</span></div>`; }
 function dAct(r){ const s=dState(r);
   if(s==='load') return `<button class="dbtn amber" data-dload="${r.id}">${L('完成装货 · 等待提货','Loading done · await pickup')}</button>`;
   if(s==='wait') return `<button class="dbtn green" data-dpick="${r.id}">${L('确认已提 · 任务闭环','Confirm picked up · close')}</button>`;
@@ -625,7 +633,7 @@ function renderDrops(){
   $('openCnt').textContent=open.length||''; $('openCnt').style.display=open.length?'':'none';
   $('openCnt').classList.toggle('hot', open.some(r=>isStale(r)||isLate(r)));
   if(S.tab!=='tasks') return;
-  $('tasksView').innerHTML = `<div class="hrow"><div class="ro" style="flex:1;margin:0">${L(`本仓未闭环的甩柜任务 ${open.length} 个 · 装载超过 ${LOAD_MIN} 分钟、待提超过 2 小时标红`,`${open.length} open drop-trailer tasks · red = loading > ${LOAD_MIN} min or waiting > 2h`)}</div><button class="chip" id="dRefresh" style="flex:none">${t('refresh')}</button></div>`
+  $('tasksView').innerHTML = `<div class="hrow"><div class="ro" style="flex:1;margin:0">${L(`本仓未闭环的甩柜任务 ${open.length} 个 · 装载超过 1 小时、待提超过 2 小时标红；16:00 以后开始装的按可能留柜处理`,`${open.length} open drop-trailer tasks · red = loading > 1h or waiting > 2h; started after 16:00 = may be held overnight`)}</div><button class="chip" id="dRefresh" style="flex:none">${t('refresh')}</button></div>`
     + (open.length ? open.map(dCard).join('') : `<div class="card" style="text-align:center;color:var(--ink3)">${L('没有进行中的提货任务','No open pickup tasks')}</div>`);
 }
 function renderDropRemind(){
@@ -662,7 +670,7 @@ async function submitDrop(w){
   try{ overlay(t('saving'));
     const { error } = await sb.from('pickups').insert(row); if(error) throw error;
     overlay(''); $('trailer').value=''; $('dock').value=''; $('estQty').value=''; S.dupConfirm=false;
-    toast(L(`任务已开始，预计 ${hm(start.getTime()+LOAD_MIN*60000)} 装完`,`Task started, ETA ${hm(start.getTime()+LOAD_MIN*60000)}`));
+    toast(L(`任务已开始，预计 ${hm(start.getTime()+LOAD_MIN*60000)}–${hm(start.getTime()+LOAD_MAX*60000)} 装完`,`Task started, ETA ${hm(start.getTime()+LOAD_MIN*60000)}–${hm(start.getTime()+LOAD_MAX*60000)}`));
     renderToday(); setTab('tasks');
   }catch(err){ overlay(''); $('err').textContent=t('fail')+(err.message||err); }
   finally{ $('submit').disabled=false; }
@@ -729,7 +737,7 @@ function dHist(r){
 function dropLang(){
   $('estLbl').textContent=L('预计货量','Estimated volume'); $('estHint').textContent=L('选填','optional');
   $('euP').textContent=L('板','Pallets'); $('euO').textContent=L('单','Orders'); $('dockLbl').textContent=L('Dock 口','Dock');
-  $('dropFlow').innerHTML=`<div class="flow"><b>① ${L('装载中','Loading')}</b>→<b>② ${L('待提货','Awaiting pickup')}</b>→<b>③ ${L('已提（闭环）','Picked up (closed)')}</b></div><div style="font-size:12px;color:var(--ink2);margin-top:8px">${L(`提交即开始装载任务，预计 ${LOAD_MIN} 分钟装完。完成装货、确认已提在「提货任务跟进」里操作。`,`Submitting starts a loading task (ETA ${LOAD_MIN} min). Mark loaded / picked up under "Pickup tasks".`)}</div>`;
+  $('dropFlow').innerHTML=`<div class="flow"><b>① ${L('装载中','Loading')}</b>→<b>② ${L('待提货','Awaiting pickup')}</b>→<b>③ ${L('已提（闭环）','Picked up (closed)')}</b></div><div style="font-size:12px;color:var(--ink2);margin-top:8px">${L(`提交即开始装载任务，预计 40 分钟–1 小时装完。完成装货、确认已提在「提货任务跟进」里操作。`,`Submitting starts a loading task (ETA 40–60 min). Mark loaded / picked up under "Pickup tasks".`)}</div>`;
   applyMode(); renderDrops(); renderDropRemind();
 }
 
