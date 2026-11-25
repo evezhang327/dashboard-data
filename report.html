@@ -66,6 +66,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
 .tabs button.on{background:#fff;color:var(--red);box-shadow:0 1px 2px #0f172a1a}
 .hrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
 .hrow select,.hrow input{flex:1;padding:10px;font-size:15px}
+body.admf .nadm{display:none!important}
+.admf-only,.admf-inl{display:none}body.admf .admf-only{display:flex}body.admf .admf-inl{display:inline}
 .adm{font-size:12px;background:#fff4e5;color:#8a4b00;border-radius:8px;padding:8px 10px;margin-bottom:10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
 .adm a,.adm button{color:var(--red);background:none;border:0;padding:0;font-size:12px;text-decoration:underline;cursor:pointer}
 .ract{display:flex;gap:8px;margin-top:8px}
@@ -105,6 +107,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
 <nav class="tabs"><div><button data-tab="form" class="on" data-t="tabForm"></button><button data-tab="history" data-t="tabHistory"></button></div></nav>
 
 <main id="formView">
+  <div class="adm admf-only" id="fAdmin"></div>
   <div class="note" id="demoNote" style="display:none" data-t="demo"></div>
 
   <div class="card">
@@ -117,7 +120,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
     <div class="grid" id="carriers"></div>
   </div>
 
-  <div class="card">
+  <div class="card nadm">
     <div class="lbl"><span><span data-t="trailer"></span><span class="req">*</span></span><small data-t="trailerHint"></small></div>
     <input type="text" id="trailer" class="trailer" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="e.g. 53A1234">
   </div>
@@ -127,26 +130,26 @@ input:focus,select:focus,textarea:focus{outline:2px solid #e1251b40;border-color
     <input type="datetime-local" id="arrived">
   </div>
 
-  <div class="card">
+  <div class="card nadm">
     <div class="row">
       <div><div class="lbl"><span><span data-t="orders"></span><span class="req qreq">*</span></span><small class="qhint" data-t="either"></small></div><input type="number" id="orders" inputmode="numeric" min="0" step="1" placeholder="0"></div>
       <div><div class="lbl"><span><span data-t="pallets"></span><span class="req qreq">*</span></span><small class="qhint" data-t="either"></small></div><input type="number" id="pallets" inputmode="numeric" min="0" step="1" placeholder="0"></div>
     </div>
   </div>
 
-  <div class="card">
+  <div class="card nadm">
     <div class="lbl"><span><span data-t="photos"></span><span class="req">*</span></span><small data-t="photoHint"></small></div>
     <div class="photos" id="photos"></div>
     <input type="file" id="file" accept="image/*" capture="environment" multiple style="display:none">
   </div>
 
   <div class="card">
-    <div class="lbl"><span data-t="exception"></span></div>
+    <div class="lbl"><span><span data-t="exception"></span><span class="req admf-inl">*</span></span></div>
     <div class="chips" id="exc"></div>
     <textarea id="note" maxlength="500" style="margin-top:10px;display:none"></textarea>
   </div>
 
-  <div class="card">
+  <div class="card nadm">
     <div class="lbl"><span><span data-t="reporter"></span><span class="req">*</span></span></div>
     <input type="text" id="reporter" maxlength="40" autocomplete="name">
   </div>
@@ -183,13 +186,13 @@ const T = {
   zh:{title:'提货车辆登记',wh:'仓库',carrier:'服务商',trailer:'Trailer Number（车厢号）',trailerHint:'以车厢上的号码为准',arrived:'到达时间',now:'现在',orders:'本车交接单量',pallets:'板数',photos:'照片',photoHint:'车厢号 / 装车照片，最多 6 张',addPhoto:'拍照',exception:'异常情况',notePh:'请简要说明异常（选填）',reporter:'填报人姓名',submit:'提交登记',
       demo:'演示模式：尚未连接数据库，提交不会保存。',
       excs:[['','无异常'],['晚到','晚到'],['车满/部分拒收','车满/部分拒收'],['货未齐','货未齐'],['车辆问题','车辆问题'],['其他','其他']],
-      e_wh:'请选择仓库',e_carrier:'请选择服务商',e_trailer:'请填写 Trailer Number',e_arrived:'请填写到达时间',e_orders:'单量不能为负数',e_pallets:'板数不能为负数',e_pallets_req:'单量和板数至少填一项',either:'二选一',optional2:'选填',optional:'选填',e_photo:'请至少拍 1 张照片',e_reporter:'请填写填报人',e_note:'选择"其他"时请填写说明',
+      e_exc:'请选择异常类型',e_note_adm:'请填写备注',e_wh:'请选择仓库',e_carrier:'请选择服务商',e_trailer:'请填写 Trailer Number',e_arrived:'请填写到达时间',e_orders:'单量不能为负数',e_pallets:'板数不能为负数',e_pallets_req:'单量和板数至少填一项',either:'二选一',optional2:'选填',optional:'选填',e_photo:'请至少拍 1 张照片',e_reporter:'请填写填报人',e_note:'选择"其他"时请填写说明',
       uploading:'正在上传照片…',saving:'正在提交…',okTitle:'登记成功',again:'继续登记下一辆',dup:'这辆车已经登记过（同仓库、服务商、车厢号和到达时间），请勿重复提交。',
       fail:'提交失败，请检查网络后重试：',tabForm:'登记',tabHistory:'历史记录',readonly:'只读：可查看本仓已提交的记录，不能修改。备注：若错误提交需要修改，请联系运配管理员。',fixNote:'备注：若错误提交需要修改，请联系运配管理员。',refresh:'刷新',hToday:'今天',hYesterday:'昨天',hAll:'大促全部（11/20–12/4）',hAllCarrier:'全部',hSearch:'搜索 Trailer / 填报人',hTrucks:'车',hOrders:'单',hPallets:'板',hNone:'没有记录',hVoid:'已作废',hPhotos:'张照片',hBy:'填报',hLoading:'加载中…',hErr:'查询失败：',hPickWh:'请先在「登记」页选择仓库',todayTitle:'今日本仓已登记',trucks:'车',none:'今天还没有登记',unitT:'按车',unitP:'按板',confirmDup:'今天这个 Trailer 已登记过，确定再次提交吗？再点一次提交确认。'},
   en:{title:'Pickup Check-in',wh:'Warehouse',carrier:'Carrier',trailer:'Trailer Number',trailerHint:'As shown on the trailer',arrived:'Arrival time',now:'Now',orders:'Orders handed over',pallets:'Pallets',photos:'Photos',photoHint:'Trailer no. / loading, up to 6',addPhoto:'Camera',exception:'Exception',notePh:'Describe the issue (optional)',reporter:'Your name',submit:'Submit',
       demo:'Demo mode: not connected to the database. Submissions are not saved.',
       excs:[['','None'],['晚到','Late'],['车满/部分拒收','Full / partial refusal'],['货未齐','Freight not ready'],['车辆问题','Vehicle issue'],['其他','Other']],
-      e_wh:'Select a warehouse',e_carrier:'Select a carrier',e_trailer:'Enter the trailer number',e_arrived:'Enter the arrival time',e_orders:'Orders cannot be negative',e_pallets:'Pallets cannot be negative',e_pallets_req:'Enter orders or pallets (at least one)',either:'either one',optional2:'optional',optional:'optional',e_photo:'Take at least 1 photo',e_reporter:'Enter your name',e_note:'Please describe "Other"',
+      e_exc:'Select an exception type',e_note_adm:'Please add a note',e_wh:'Select a warehouse',e_carrier:'Select a carrier',e_trailer:'Enter the trailer number',e_arrived:'Enter the arrival time',e_orders:'Orders cannot be negative',e_pallets:'Pallets cannot be negative',e_pallets_req:'Enter orders or pallets (at least one)',either:'either one',optional2:'optional',optional:'optional',e_photo:'Take at least 1 photo',e_reporter:'Enter your name',e_note:'Please describe "Other"',
       uploading:'Uploading photos…',saving:'Submitting…',okTitle:'Checked in',again:'Check in another truck',dup:'This truck was already submitted (same warehouse, carrier, trailer and time).',
       fail:'Submit failed. Check your connection and retry: ',tabForm:'Check-in',tabHistory:'History',readonly:'Read-only: view this warehouse\'s submitted records. Note: if a record was submitted by mistake, contact the transport & distribution admin to correct it.',fixNote:'Note: if this was submitted by mistake, contact the transport & distribution admin to correct it.',refresh:'Refresh',hToday:'Today',hYesterday:'Yesterday',hAll:'Whole peak (11/20–12/4)',hAllCarrier:'All',hSearch:'Search trailer / name',hTrucks:'trucks',hOrders:'orders',hPallets:'pallets',hNone:'No records',hVoid:'Voided',hPhotos:'photos',hBy:'by',hLoading:'Loading…',hErr:'Query failed: ',hPickWh:'Select a warehouse on the Check-in tab first',todayTitle:'Checked in today at this warehouse',trucks:'trucks',none:'Nothing checked in yet today',unitT:'truck',unitP:'pallet',confirmDup:'This trailer was already checked in today. Tap Submit again to confirm.'},
 };
@@ -230,8 +233,9 @@ function renderCarriers(){
   const unit=(S.carriers.find(c=>c.code===S.carrier)||{}).unit;
 }
 function renderExc(){
-  $('exc').innerHTML = t('excs').map(([v,l])=>`<span class="chip ${v===''?'none':''} ${S.exc===v?'on':''}" data-exc="${esc(v)}">${esc(l)}</span>`).join('');
-  $('note').style.display = S.exc ? '' : 'none';
+  $('exc').innerHTML = t('excs').filter(([v])=>!(S.admin&&v==='')).map(([v,l])=>`<span class="chip ${v===''?'none':''} ${S.exc===v?'on':''}" data-exc="${esc(v)}">${esc(l)}</span>`).join('');
+  $('note').style.display = (S.exc||S.admin) ? '' : 'none';
+  $('note').placeholder = S.admin ? '备注（必填）：说明异常情况' : '';
 }
 function renderPhotos(){
   $('photos').innerHTML = S.photos.map((p,i)=>`<div class="ph"><img src="${p.url}" alt=""><button data-del="${i}" aria-label="remove">×</button></div>`).join('') +
@@ -269,6 +273,7 @@ const clientId = store.get('cid','') || (()=>{ const v=uuid(); store.set('cid',v
 function validate(){
   const w=whObj(); const unit=(S.carriers.find(c=>c.code===S.carrier)||{}).unit;
   if(!w) return 'e_wh'; if(!S.carrier) return 'e_carrier';
+  if(S.admin){ if(!$('arrived').value) return 'e_arrived'; if(!S.exc) return 'e_exc'; if(!$('note').value.trim()) return 'e_note_adm'; return null; }
   if(!$('trailer').value.trim()) return 'e_trailer'; if(!$('arrived').value) return 'e_arrived';
   if($('orders').value!=='' && +$('orders').value<0) return 'e_orders';
   if($('orders').value==='' && $('pallets').value==='') return 'e_pallets_req';
@@ -282,7 +287,9 @@ function overlay(txt){ $('overlay').classList.toggle('on',!!txt); $('overlayText
 async function submit(){
   $('err').textContent='';
   const v=validate(); if(v){ $('err').textContent=t(v); $('err').scrollIntoView({block:'center',behavior:'smooth'}); return; }
-  const w=whObj(); const trailer=$('trailer').value.trim().toUpperCase().replace(/\s+/g,'');
+  const w=whObj();
+  if(S.admin) return submitAdmin(w);
+  const trailer=$('trailer').value.trim().toUpperCase().replace(/\s+/g,'');
   // 同日同 trailer 已登记：二次确认
   if(S.today && !S.dupConfirm){ const hit=(S.today.rows||[]).find(r=>r.carrier===S.carrier&&(r.trailers||[]).some(x=>x.toUpperCase()===trailer)); if(hit){ S.dupConfirm=true; $('err').textContent=t('confirmDup'); return; } }
   const arrived=new Date($('arrived').value);
@@ -309,12 +316,25 @@ async function submit(){
   }catch(err){ overlay(''); $('err').textContent = t('fail') + (err.message||err); }
   finally{ $('submit').disabled=false; }
 }
+// 管理员报备：只登记异常，不算车（kind='admin'），无照片/Trailer/单量
+async function submitAdmin(w){
+  const arrived=new Date($('arrived').value); const day=localDateIn(w.tz, arrived);
+  const row={ date:day, warehouse:w.code, carrier:S.carrier, trailer_no:'ADMIN-'+uuid().replace(/-/g,'').slice(0,8).toUpperCase(), arrived_at:arrived.toISOString(),
+    orders:null, pallets:null, exception_type:S.exc, note:$('note').value.trim(), reporter:(S.adminEmail||'admin').split('@')[0],
+    photo_paths:[], client_id:clientId, kind:'admin' };
+  store.set('wh',w.code); $('submit').disabled=true;
+  try{ overlay(t('saving'));
+    const { error } = await sbA.from('pickups').insert(row); if(error) throw error;
+    overlay(''); showDone(row, w);
+  }catch(err){ overlay(''); $('err').textContent = t('fail') + (err.message||err); }
+  finally{ $('submit').disabled=false; }
+}
 function showDone(row, w){
   $('formView').style.display='none'; $('submitBar').style.display='none';
   const d=new Date(row.arrived_at);
   $('doneView').style.display='';
   $('doneView').innerHTML = `<div class="card done"><div class="ok">✓</div><h2>${t('okTitle')}</h2>${LIVE?'':`<div class="note">${t('demo')}</div>`}
-    <div class="sum"><div><b>${esc(w.code)}</b> · ${esc(row.carrier)}</div><div>Trailer: <b>${esc(row.trailer_no)}</b></div><div>${t('arrived')}: ${d.toLocaleString(lang==='zh'?'zh-CN':'en-US',{hour12:false})}</div><div>${t('orders')}: ${row.orders??'—'}${row.pallets!=null?` · ${t('pallets')}: ${row.pallets}`:''}</div>${row.exception_type?`<div style="color:var(--bad)">${t('exception')}: ${esc(row.exception_type)}</div>`:''}<div>${t('photos')}: ${S.photos.length}</div></div>
+    ${row.kind==='admin'?`<div class="sum"><div><b>${esc(w.code)}</b> · ${esc(row.carrier)} · 管理员报备（不计车）</div><div>${t('arrived')}: ${d.toLocaleString('zh-CN',{hour12:false})}</div><div>异常：${esc(row.exception_type)}</div><div>备注：${esc(row.note)}</div></div>`:''}<div class="sum" ${row.kind==='admin'?'style="display:none"':''}><div><b>${esc(w.code)}</b> · ${esc(row.carrier)}</div><div>Trailer: <b>${esc(row.trailer_no)}</b></div><div>${t('arrived')}: ${d.toLocaleString(lang==='zh'?'zh-CN':'en-US',{hour12:false})}</div><div>${t('orders')}: ${row.orders??'—'}${row.pallets!=null?` · ${t('pallets')}: ${row.pallets}`:''}</div>${row.exception_type?`<div style="color:var(--bad)">${t('exception')}: ${esc(row.exception_type)}</div>`:''}<div>${t('photos')}: ${S.photos.length}</div></div>
     <div class="note" style="margin-top:10px;text-align:left">${t('fixNote')}</div><button class="btn2 dark" id="againBtn">${t('again')}</button></div>`;
   $('againBtn').onclick=resetForm;
 }
@@ -360,7 +380,7 @@ async function loadHistory(){
   if(!LIVE){ S.hRows=S.demoRows.filter(r=>r.warehouse===w.code&&r.date>=from&&r.date<=to); return renderHistory(); }
   $('hList').innerHTML=`<div class="empty" style="text-align:center;color:var(--ink3);padding:20px">${t('hLoading')}</div>`;
   const { data, error } = S.admin
-    ? await sbA.from('pickups').select('id,date,arrived_at,carrier,trailer_no,orders,pallets,exception_type,note,reporter,photo_paths,voided,void_reason,created_at').eq('warehouse',w.code).gte('date',from).lte('date',to).order('arrived_at',{ascending:false}).limit(1000)
+    ? await sbA.from('pickups').select('id,date,arrived_at,carrier,trailer_no,orders,pallets,exception_type,note,reporter,photo_paths,voided,void_reason,created_at,kind').eq('warehouse',w.code).gte('date',from).lte('date',to).order('arrived_at',{ascending:false}).limit(1000)
     : await sb.rpc('wh_history',{p_wh:w.code,p_from:from,p_to:to,p_carrier:null});
   if(S.admin && data) data.forEach(r=>{ r.photo_count=(r.photo_paths||[]).length; });
   if(error){ $('hList').innerHTML=`<div class="err">${t('hErr')}${esc(error.message)}</div>`; S.hRows=[]; return; }
@@ -370,13 +390,13 @@ function renderHistory(){
   if(S.hRows===null){ $('hSum').innerHTML=''; $('hList').innerHTML=`<div class="ro">${t('hPickWh')}</div>`; return; }
   const q=$('hQ').value.trim().toLowerCase();
   const rows=S.hRows.filter(r=>(!S.hCarrier||r.carrier===S.hCarrier)&&(!q||[r.trailer_no,r.reporter].join(' ').toLowerCase().includes(q)));
-  const live=rows.filter(r=>!r.voided);
+  const live=rows.filter(r=>!r.voided&&r.kind!=='admin');
   $('hSum').innerHTML=`<span><b>${live.length}</b> ${t('hTrucks')}</span><span><b>${live.reduce((s,r)=>s+(r.orders||0),0).toLocaleString()}</b> ${t('hOrders')}</span><span><b>${live.reduce((s,r)=>s+(r.pallets||0),0).toLocaleString()}</b> ${t('hPallets')}</span>`;
   const w=whObj();
   const fmtT=r=>{ const d=new Date(r.arrived_at); return new Intl.DateTimeFormat(lang==='zh'?'zh-CN':'en-US',{timeZone:(w&&w.tz)||undefined,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(d); };
   $('hList').innerHTML = rows.length ? rows.map(r=>`<div class="rec ${r.voided?'void':''}">
-      <div class="h"><span class="tr">${esc(r.trailer_no)}</span><span><span class="pill c">${esc(r.carrier)}</span>${r.voided?` <span class="pill">${t('hVoid')}</span>`:''}</span></div>
-      <div class="m"><span>${fmtT(r)}</span><span>${t('orders')} ${r.orders??'—'}</span>${r.pallets!=null?`<span>${t('pallets')} ${r.pallets}</span>`:''}<span>${r.photo_count||0} ${t('hPhotos')}</span><span>${t('hBy')} ${esc(r.reporter)}</span></div>
+      <div class="h"><span class="tr">${r.kind==='admin'?'管理员报备':esc(r.trailer_no)}</span><span><span class="pill c">${esc(r.carrier)}</span>${r.voided?` <span class="pill">${t('hVoid')}</span>`:''}</span></div>
+      <div class="m"><span>${fmtT(r)}</span>${r.kind==='admin'?'<span>不计车</span>':`<span>${t('orders')} ${r.orders??'—'}</span>${r.pallets!=null?`<span>${t('pallets')} ${r.pallets}</span>`:''}<span>${r.photo_count||0} ${t('hPhotos')}</span>`}<span>${t('hBy')} ${esc(r.reporter)}</span></div>
       ${r.exception_type?`<div class="m"><span class="pill x">${esc(r.exception_type)}</span>${r.note?`<span>${esc(r.note)}</span>`:''}</div>`:''}
       ${S.admin?`<div class="ract"><button data-aedit="${r.id}">修改</button><button class="r" data-adel="${r.id}">删除</button></div>`:''}
     </div>`).join('') : `<div style="text-align:center;color:var(--ink3);padding:24px">${t('hNone')}</div>`;
@@ -395,6 +415,9 @@ function amodal(html){ $('amodalBox').innerHTML=html; $('amodal').classList.add(
 function amodalClose(){ $('amodal').classList.remove('on'); }
 function renderAdminBar(){
   if(!LIVE){ $('hAdmin').innerHTML=''; return; }
+  document.body.classList.toggle('admf', !!S.admin);
+  $('fAdmin').innerHTML = S.admin ? `<span>管理员报备模式：只登记异常，不计入到车数，无需照片 / Trailer / 单量（${esc(S.adminEmail||'')}）</span>` : '';
+  renderExc();
   $('hRo').style.display = S.admin ? 'none' : '';
   $('hAdmin').innerHTML = S.admin
     ? `<div class="adm"><span>管理员模式：可修改、删除本仓记录（${esc(S.adminEmail||'')}）</span><button id="aLogout">退出</button></div>`
@@ -408,7 +431,7 @@ async function checkAdmin(){
   renderAdminBar();
 }
 function adminLogin(){
-  amodal(`<h3 style="margin:2px 0 4px">管理员登录</h3><div style="font-size:12px;color:var(--ink2)">登录后可在历史记录里修改、删除记录。仓库同事登记不需要登录。</div>
+  amodal(`<h3 style="margin:2px 0 4px">管理员登录</h3><div style="font-size:12px;color:var(--ink2)">登录后可在历史记录里修改、删除记录，「登记」页变为管理员异常报备（不计车）。仓库同事登记不需要登录。</div>
     <label>邮箱<input id="aEmail" type="email" autocomplete="username"></label><label>密码<input id="aPwd" type="password" autocomplete="current-password"></label>
     <div class="e" id="aErr"></div><button class="btn2 dark" id="aGo">登录</button><button class="btn2" id="aCancel">取消</button>`);
   $('aCancel').onclick=amodalClose;
@@ -496,6 +519,7 @@ async function boot(){
   $('arrived').value=localInputValue(new Date());
   $('reporter').value=store.get('reporter','');
   applyLang();
+  checkAdmin();
 }
 ['orders','pallets'].forEach(id=>$(id).addEventListener('input',qtyHint));
 boot();
