@@ -1183,7 +1183,7 @@ function renderMatrix(){
       if(rule && !p.length && !isHo(w.code,c)){ const rc=ruleCell(rule,w.code,c,fu,fOrd,hasOrdFc,day,future); if(rule.mode!=='none'){ fo+=fOrd; ao+=rc.ao; } cells+=rc.html; continue; }
       const ho=hoOf(w.code,c,day);
       if(ho){ fo+=fOrd; ao+=ho.packages; cells+=hoCell(w.code,c,ho,fu,fOrd,hasOrdFc,future); continue; }
-      if(isHo(w.code,c) && !fu && !future){ cells+=`<td><div class="cell st-auto"><div class="u">—</div><div class="o">${hasOrdFc?'单 — / '+fmt(fOrd):'容器交接'}</div><div class="s">待容器交接</div></div></td>`; continue; }
+      if(isHo(w.code,c) && !fu && !future && !p.length){ cells+=`<td><div class="cell st-auto"><div class="u">—</div><div class="o">${hasOrdFc?'单 — / '+fmt(fOrd):'容器交接'}</div><div class="s">待容器交接</div></div></td>`; continue; }
       const au = unitOf(c)==='pallet' ? p.reduce((s,r)=>s+(r.pallets||0),0) : p.length;
       const aOrd=p.reduce((s,r)=>s+(r.orders||0),0);
       fo+=fOrd; ao+=aOrd;
