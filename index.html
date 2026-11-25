@@ -835,6 +835,7 @@ async function loadLive(){
   if(f.data.length) S.forecast = f.data.map(r=>({...r, unit: unitOf(r.carrier)}));
   S.pickups = p.data;
   // 特殊提货规则（协同单 / 只比单量 / 固定车次 / 无此业务）：这些格子不要求现场填报
+  loadHb();
   try{ const pr=await sb.from('pickup_rules').select('*'); S.rules = pr.error ? [] : pr.data; }catch(e){ S.rules=[]; }
   try{ const h=await sb.from('handover_daily').select('warehouse,date,carrier,trucks,containers,packages,unbound,trailers,updated_at').gte('date',loadRange()[0]).lte('date',loadRange()[1]).limit(5000); if(h.error) throw h.error; setHandover(h.data); }catch(e){ console.warn('容器交接加载失败', e); setHandover([]); }
   try{ await loadDaily(); }catch(e){ console.warn('日均预测加载失败', e); }
@@ -920,6 +921,21 @@ const hoBind = ho => { const tot=ho.containers||0, bc=(ho.trailers||[]).reduce((
 const isHo = (wh,c) => HO_COMBOS.has(wh+'|'+c);
 // 到车记录 = 人工填报 + 容器交接车次（容器交接的格子以 iWMS 为准，同格人工填报不再重复计算）
 // LAX5 甩柜：FedEx Ground 拆成 NC / C / Mixed 车数
+// LAX5 甩柜推送心跳：Mac 上的推送每分钟写一次，超过 5 分钟没动静标红
+async function loadHb(){
+  try{ const r=await sb.from('worker_heartbeat').select('*').eq('name','lax5_drop_push'); S.hb=(r.data||[])[0]||null; }catch(e){ S.hb=null; }
+  try{ renderAll(); }catch(e){}
+}
+setInterval(()=>{ if(LIVE&&!document.hidden) loadHb(); }, 60000);
+function hbTag(code){
+  if(code!=='ONT-LG-5-US'||!LIVE) return '';
+  const hb=S.hb; const ago=hb&&hb.last_run?Math.round((Date.now()-new Date(hb.last_run))/60000):null;
+  const errRecent=hb&&hb.last_err_at&&(Date.now()-new Date(hb.last_err_at))<10*60000;
+  const ok=ago!=null&&ago<=5&&!errRecent;
+  const txt=ago==null?'推送未运行':ok?`推送正常 · ${ago<1?'刚刚':ago+' 分钟前'}`:errRecent?'推送出错':`推送已断 ${ago>=120?Math.round(ago/60)+' 小时':ago+' 分钟'}`;
+  const tip=ok?'LAX5 甩柜进度推送（京ME）在线':errRecent?('最近一次推送失败：'+(hb.last_err||'')):'Mac 可能盒盖 / 断网 / 不在内网，恢复后会补推漏掉的步骤';
+  return `<div style="margin-top:4px;font-size:11px;color:${ok?'#1f8a4c':'#c62f2f'}" title="${esc(tip)}">● ${txt}</div>`;
+}
 function subLine(w,c,p){
   if(!(w==='ONT-LG-5-US'&&c==='FedEx Ground') && !p.some(r=>r.sub_carrier)) return '';
   const n=k=>p.filter(r=>r.sub_carrier===k).length, other=p.filter(r=>!r.sub_carrier).length;
@@ -1174,7 +1190,7 @@ function renderMatrix(){
       cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div>${palLine}${subLine(w.code,c,p)}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
-    h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}</div></td>${cells}<td class="num"><b>${future?'—':fmt(ao)}</b><br><span style="color:var(--ink3)">/ ${fmt(fo)}</span></td></tr>`;
+    h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}${hbTag(w.code)}</div></td>${cells}<td class="num"><b>${future?'—':fmt(ao)}</b><br><span style="color:var(--ink3)">/ ${fmt(fo)}</span></td></tr>`;
   }
   h+='</tbody>';
   $('matrix').innerHTML = any ? h : `<tbody><tr><td class="empty">当前筛选下没有数据</td></tr></tbody>`;
@@ -1344,7 +1360,7 @@ function renderDailyMatrix(){
       cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c} · 预测 ${fmt(est)} 单 · Gaylord ${fmt(g)} · 托盘 ${fmt(pl)}"><div class="u">${fmt(p.length)} / ${fmt(pt)}</div><div class="o">${f.length?`单 ${fmt(est)} · G${fmt(g)}${pl?' 托'+fmt(pl):''}`:'无早上预测'}</div>${subLine(w.code,c,p)}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
-    h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}</div></td>${cells}<td class="num"><b>${fmt(fo)}</b></td></tr>`;
+    h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}${hbTag(w.code)}</div></td>${cells}<td class="num"><b>${fmt(fo)}</b></td></tr>`;
   }
   h+='</tbody>';
   $('matrix').innerHTML = any ? h : `<tbody><tr><td class="empty">${md(day)} 还没有早上预测，也没有到车登记</td></tr></tbody>`;
