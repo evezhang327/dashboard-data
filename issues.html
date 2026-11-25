@@ -123,8 +123,9 @@ async function load(){
   S.members=mq.data||[];
   if(wq.data){ wq.data.forEach(w=>S.wh[w.code]=w); S.wh.__loaded=true; }
   if(cq.data) S.carriers=cq.data.map(x=>x.code);
-  const ids=S.issues.map(x=>x.id); S.logs={};
-  for(let i=0;i<ids.length;i+=200){ const lq=await sb.from('issue_logs').select('*').in('issue_id',ids.slice(i,i+200)).order('at'); (lq.data||[]).forEach(l=>(S.logs[l.issue_id]=S.logs[l.issue_id]||[]).push(l)); }
+  const ids=S.issues.map(x=>x.id); const LG={};   // 先拼好再一次性替换，避免两次刷新同时进行时日志重复
+  for(let i=0;i<ids.length;i+=200){ const lq=await sb.from('issue_logs').select('*').in('issue_id',ids.slice(i,i+200)).order('at'); (lq.data||[]).forEach(l=>(LG[l.issue_id]=LG[l.issue_id]||[]).push(l)); }
+  S.logs=LG;
 }
 function filtered(){
   const q=S.f.q.trim().toLowerCase();
