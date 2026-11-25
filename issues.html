@@ -37,7 +37,7 @@ h1 small{font-size:14px;color:var(--ink3);font-weight:500;margin-left:8px}
 select,input[type=text],input[type=datetime-local],textarea{border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:#fff}
 textarea{width:100%;min-height:64px;resize:vertical}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
-.stat{padding:12px 16px}.stat small{color:var(--ink2);font-size:12px}.stat b{display:block;font-size:24px}
+.stat{padding:12px 16px;cursor:pointer;transition:.15s}.stat:hover{border-color:#cbd2dc;box-shadow:0 2px 8px #0f172a12}.stat.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink) inset}.stat small{color:var(--ink2);font-size:12px}.stat b{display:block;font-size:24px}
 .issue{padding:14px 16px;margin-bottom:10px;border-left:4px solid #e3e5ea}
 .issue.todo{border-left-color:var(--red)}.issue.doing{border-left-color:#d98a00}.issue.done{border-left-color:var(--good)}
 .ih{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
@@ -140,7 +140,8 @@ function filtered(){
 }
 function render(){
   const all=S.issues, c=k=>all.filter(x=>x.status===k).length, mine=all.filter(x=>x.assignee===S.me&&x.status!=='done').length;
-  $('stats').innerHTML=[['待跟进',c('todo'),'var(--red)'],['跟进中',c('doing'),'#b26b00'],['已解决',c('done'),'var(--good)'],['我的未解决',mine,'var(--ink)']].map(([l,n,col])=>`<div class="card stat"><small>${l}</small><b style="color:${col}">${n}</b></div>`).join('');
+  const cur=S.f.who==='me'&&S.f.status==='open'?'mine':(S.f.who==='all'?S.f.status:'');
+  $('stats').innerHTML=[['todo','待跟进',c('todo'),'var(--red)'],['doing','跟进中',c('doing'),'#b26b00'],['done','已解决',c('done'),'var(--good)'],['mine','我的未解决',mine,'var(--ink)']].map(([k,l,n,col])=>`<div class="card stat ${cur===k?'on':''}" data-stat="${k}" title="点击查看明细"><small>${l}</small><b style="color:${col}">${n}</b></div>`).join('');
   const SF=[['open','未解决'],['todo','待跟进'],['doing','跟进中'],['done','已解决'],['all','全部']];
   $('fStatus').innerHTML=SF.map(([k,l])=>`<span class="chip ${S.f.status===k?'on':''}" data-fs="${k}">${l}</span>`).join('');
   $('fWho').innerHTML=`<option value="all">全部负责人</option><option value="me">我的（${esc(S.me)}）</option><option value="none">未指派</option>`+S.members.map(m=>`<option value="${esc(m.name)}">${esc(m.name)} · ${esc(m.full_name||'')}</option>`).join('');
@@ -180,6 +181,7 @@ function textModal(title,ph,required,btn,cls,onOk){
 }
 document.addEventListener('click',async e=>{
   const fs=e.target.closest('[data-fs]'); if(fs){ S.f.status=fs.dataset.fs; render(); return; }
+  const st=e.target.closest('[data-stat]'); if(st){ const k=st.dataset.stat; if(k==='mine'){ S.f.status='open'; S.f.who='me'; } else { S.f.status=k; S.f.who='all'; } S.f.q=''; $('fQ').value=''; render(); $('list').scrollIntoView({behavior:'smooth',block:'start'}); return; }
   const b=e.target.closest('[data-act]'); if(b){ const id=b.dataset.id, a=b.dataset.act;
     if(a==='start') return textModal('开始跟进','可选：先写一句跟进计划，比如「已联系 UniUni 调度」',false,'跟进中','amber',v=>act(id,'start',v));
     if(a==='note') return textModal('记录进展','比如：问了 UniUni，答复今晚加车',true,'保存','dark',v=>act(id,'note',v));
