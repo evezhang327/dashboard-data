@@ -154,7 +154,7 @@ function card(x){
   const opts=`<option value="">未指派</option>`+S.members.map(m=>`<option value="${esc(m.name)}" ${x.assignee===m.name?'selected':''}>${esc(m.name)}</option>`).join('');
   const head=`${esc(whName(p.warehouse))} · ${esc(carrierLabel(p))}${isAdminRow(p)?' · <span style="color:var(--ink3)">报备</span>':` · ${esc(p.trailer_no)}`}`;
   const acts = x.status==='done'
-    ? `<button class="btn sm" data-act="reopen" data-id="${x.id}">重新打开</button>`
+    ? `<button class="btn sm green" data-act="resolve" data-id="${x.id}">${!x.resolution||x.resolution==='历史记录'?'填写解决方式':'修改解决方式'}</button><button class="btn sm" data-act="reopen" data-id="${x.id}">重新打开</button>`
     : `${x.status==='todo'?`<button class="btn sm amber" data-act="start" data-id="${x.id}">跟进中</button>`:''}<button class="btn sm" data-act="note" data-id="${x.id}">记进展</button><button class="btn sm green" data-act="resolve" data-id="${x.id}">已解决</button>`;
   return `<div class="card issue ${x.status}">
     <div class="ih"><div><div class="it">${head}</div><div class="im">${tLocal(p.arrived_at,p.warehouse)}（当地）${p.dock?` · Dock ${esc(p.dock)}`:''} · 报备人 ${esc(p.reporter||'—')}</div></div>
@@ -174,9 +174,9 @@ async function act(id,action,note,assignee){
 function modal(html){ $('mbox').innerHTML=html; $('modal').classList.add('on'); }
 function closeModal(){ $('modal').classList.remove('on'); }
 $('modal').onclick=e=>{ if(e.target.id==='modal') closeModal(); };
-function textModal(title,ph,required,btn,cls,onOk){
+function textModal(title,ph,required,btn,cls,onOk,init){
   modal(`<h3>${title}</h3><textarea id="mText" placeholder="${esc(ph)}"></textarea><div class="err" id="mErr"></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px"><button class="btn" id="mCancel">取消</button><button class="btn ${cls}" id="mOk">${btn}</button></div>`);
-  $('mText').focus(); $('mCancel').onclick=closeModal;
+  if(init) $('mText').value=init; $('mText').focus(); $('mCancel').onclick=closeModal;
   $('mOk').onclick=async()=>{ const v=$('mText').value.trim(); if(required&&!v){ $('mErr').textContent='这一项必填'; return; } $('mOk').disabled=true; if(await onOk(v)) closeModal(); else $('mOk').disabled=false; };
 }
 document.addEventListener('click',async e=>{
@@ -185,7 +185,7 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]'); if(b){ const id=b.dataset.id, a=b.dataset.act;
     if(a==='start') return textModal('开始跟进','可选：先写一句跟进计划，比如「已联系 UniUni 调度」',false,'跟进中','amber',v=>act(id,'start',v));
     if(a==='note') return textModal('记录进展','比如：问了 UniUni，答复今晚加车',true,'保存','dark',v=>act(id,'note',v));
-    if(a==='resolve') return textModal('已解决 · 填写解决方式','必填：怎么解决的，比如「UniUni 20:00 加 1 车，剩余货已提走」',true,'确认已解决','green',v=>act(id,'resolve',v));
+    if(a==='resolve'){ const it=S.issues.find(i=>i.id===id)||{}; const init=it.resolution&&it.resolution!=='历史记录'?it.resolution:''; return textModal(it.status==='done'?'填写 / 修改解决方式':'已解决 · 填写解决方式','必填：怎么解决的，比如「UniUni 20:00 加 1 车，剩余货已提走」',true,it.status==='done'?'保存':'确认已解决','green',v=>act(id,'resolve',v),init); }
     if(a==='reopen') return textModal('重新打开','可选：为什么重新打开',false,'重新打开','amber',v=>act(id,'reopen',v));
   }
   const sp=e.target.closest('[data-showph]'); if(sp){ const x=S.issues.find(i=>i.id===sp.dataset.showph); const box=sp.parentElement; box.innerHTML='加载中…';
