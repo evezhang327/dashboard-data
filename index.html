@@ -952,10 +952,10 @@ function pkRows(dates){ const ds=new Set(dates||datesInScope());
   const auto=(S.hoRows||[]).filter(r=>ds.has(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse));
   return man.concat(auto); }
 function hoCell(w,c,ho,fu,fOrd,hasOrdFc,future){
+  // 容器交接：只数 iWMS 交接时绑了车号的车（车号对不对不管）
   const b = hoBind(ho);
-  const st = b.need ? (status(b.bound,b.need,future)||['st-auto','']) : ['st-auto',''];
   const tips = (ho.trailers||[]).map(t=>`${t.trailer}：${fmt(t.containers)} 板`).join('\n');
-  return `<td><div class="cell ${st[0]} ho" title="${esc(w)} · ${c} · 容器交接（iWMS）· 应绑车按 53 尺 ${HO_PER_TRUCK} 板/车\n${esc(tips)}"><div class="u">${hoTriple(b.bound,b.need,0)} <span class="ho-sub">辆</span></div><div class="o">${hoLabel(0)}</div><div class="o">实际绑车 ${fmt(b.boundCont)} 板 · 应绑车 ${fmt(b.totCont)} 板</div><div class="s"><span class="ho-tag">容器交接</span>${b.bound<b.need?` <span class="ho-unb">待绑 ${fmt(b.need-b.bound)} 车</span>`:''}</div>${b.late?`<div class="o" style="font-size:11px;color:var(--ink3)" title="最后一辆车扫完之后才交接、没录车号的板，算下一车">另 ${fmt(b.late)} 板待下一车</div>`:''}</div></td>`;
+  return `<td><div class="cell st-auto ho" title="${esc(w)} · ${c} · 容器交接（iWMS 绑车）\n${esc(tips)}"><div class="u">${future?'—':fmt(b.bound)} <span class="ho-sub">辆</span></div><div class="o">托 ${fmt(b.boundCont)}</div><div class="s"><span class="ho-tag">容器交接</span></div></div></td>`;
 }
 
 function agg(fc, pk){
