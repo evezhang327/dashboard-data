@@ -909,7 +909,12 @@ function setHandover(rows){
   for(const r of rows||[]){ if(!HO_COMBOS.has(r.warehouse+'|'+r.carrier)) continue; S.ho[r.warehouse+'|'+r.carrier+'|'+r.date]=r;
     for(const t of (r.trailers||[])) S.hoRows.push({date:r.date, warehouse:r.warehouse, carrier:r.carrier, trailer_no:t.trailer, orders:t.packages, pallets:t.containers, auto:true}); }
 }
-const hoOf = (wh,c,d) => (S.ho||{})[wh+'|'+c+'|'+d];
+const hoRaw = (wh,c,d) => (S.ho||{})[wh+'|'+c+'|'+d];
+// 容器交接格子：优先 iWMS 绑车；iWMS 当天一辆都没绑、但有人工填报 → 按填报算（只对 NJ1 Amazon，LAX4 不变）
+const HO_FALLBACK = new Set(['EWR-LG-1-US|Amazon Shipping']);
+const hasManual = (wh,c,d) => (S.pickups||[]).some(r=>!r.voided&&r.kind!=='admin'&&r.warehouse===wh&&r.carrier===c&&r.date===d);
+const hoOf = (wh,c,d) => { const h=hoRaw(wh,c,d); return (h && HO_FALLBACK.has(wh+'|'+c) && !(h.trucks>0) && hasManual(wh,c,d)) ? undefined : h; };
+const hoNote = (wh,c,d) => (d && isHo(wh,c) && hoRaw(wh,c,d) && !hoOf(wh,c,d)) ? `<div class="o" style="font-size:11px;color:#b26b00" title="iWMS 当天交接没录 Trailer 号，暂按现场填报计车">iWMS 未绑车 · 按填报</div>` : '';
 // 绑车：实际绑车 = iWMS 里绑了车号的车数 / 板数；应绑车 = 实际绑车 + 未绑车号的板数按 53 尺 30 板一车折算
 const HO_PER_TRUCK = 30;
 const HOC = {b:'#E1251B', n:'#0f172a', f:'#64748b'};
@@ -1187,7 +1192,7 @@ function renderMatrix(){
       // 按车计的服务商：另起一行显示托数 = 填报托数 / 早上预测的 Gaylord + 托盘
       const aPal=p.reduce((s,r)=>s+(r.pallets||0),0), fPal=(S.dl||[]).filter(r=>r.warehouse===w.code&&r.carrier===c&&r.date===day).reduce((s,r)=>s+(r.gaylord||0)+(r.pallets||0),0);
       const palLine = unitOf(c)==='truck' && (aPal||fPal) && !(w.code==='ONT-LG-5-US'&&c==='FedEx Ground') ? `<div class="o">托 ${future?'—':fmt(aPal)} / ${fPal?fmt(fPal):'—'}</div>` : '';
-      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div>${palLine}${subLine(w.code,c,p)}<div class="s">${st[1]}</div></div></td>`;
+      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div>${palLine}${subLine(w.code,c,p)}${hoNote(w.code,c,day)}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
     h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}${hbTag(w.code)}</div></td>${cells}<td class="num"><b>${future?'—':fmt(ao)}</b><br><span style="color:var(--ink3)">/ ${fmt(fo)}</span></td></tr>`;
@@ -1357,7 +1362,7 @@ function renderDailyMatrix(){
       const ho=hoOf(w.code,c,day);
       if(ho){ cells+=hoCell(w.code,c,ho,pt,est,f.length>0,false); continue; }
       const st=status(p.length, pt, false)||['st-none','—'];
-      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c} · 预测 ${fmt(est)} 单 · Gaylord ${fmt(g)} · 托盘 ${fmt(pl)}"><div class="u">${fmt(p.length)} / ${fmt(pt)}</div><div class="o">${f.length?`单 ${fmt(est)} · G${fmt(g)}${pl?' 托'+fmt(pl):''}`:'无早上预测'}</div>${subLine(w.code,c,p)}<div class="s">${st[1]}</div></div></td>`;
+      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c} · 预测 ${fmt(est)} 单 · Gaylord ${fmt(g)} · 托盘 ${fmt(pl)}"><div class="u">${fmt(p.length)} / ${fmt(pt)}</div><div class="o">${f.length?`单 ${fmt(est)} · G${fmt(g)}${pl?' 托'+fmt(pl):''}`:'无早上预测'}</div>${subLine(w.code,c,p)}${hoNote(w.code,c,day)}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
     h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}${hbTag(w.code)}</div></td>${cells}<td class="num"><b>${fmt(fo)}</b></td></tr>`;
