@@ -919,6 +919,12 @@ const hoBind = ho => { const tot=ho.containers||0, bc=(ho.trailers||[]).reduce((
   return {bound, need: bound + Math.ceil(Math.max(0,tot-bc)/HO_PER_TRUCK), boundCont:bc, totCont:tot}; };
 const isHo = (wh,c) => HO_COMBOS.has(wh+'|'+c);
 // 到车记录 = 人工填报 + 容器交接车次（容器交接的格子以 iWMS 为准，同格人工填报不再重复计算）
+// LAX5 甩柜：FedEx Ground 拆成 NC / C / Mixed 车数
+function subLine(w,c,p){
+  if(!(w==='ONT-LG-5-US'&&c==='FedEx Ground') && !p.some(r=>r.sub_carrier)) return '';
+  const n=k=>p.filter(r=>r.sub_carrier===k).length, other=p.filter(r=>!r.sub_carrier).length;
+  return `<div class="o" style="font-size:11px">NC ${n('NC')} · C ${n('C')} · Mixed ${n('Mixed')}${other?` · 未分类 ${other}`:''} 辆</div>`;
+}
 function pkRows(dates){ const ds=new Set(dates||datesInScope());
   const man=S.pickups.filter(r=>!r.voided&&r.kind!=='admin'&&ds.has(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse)&&!hoOf(r.warehouse,r.carrier,r.date));
   const auto=(S.hoRows||[]).filter(r=>ds.has(r.date)&&S.f.carriers.has(r.carrier)&&whPass(r.warehouse));
@@ -1164,7 +1170,7 @@ function renderMatrix(){
       // 按车计的服务商：另起一行显示托数 = 填报托数 / 早上预测的 Gaylord + 托盘
       const aPal=p.reduce((s,r)=>s+(r.pallets||0),0), fPal=(S.dl||[]).filter(r=>r.warehouse===w.code&&r.carrier===c&&r.date===day).reduce((s,r)=>s+(r.gaylord||0)+(r.pallets||0),0);
       const palLine = unitOf(c)==='truck' && (aPal||fPal) ? `<div class="o">托 ${future?'—':fmt(aPal)} / ${fPal?fmt(fPal):'—'}</div>` : '';
-      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div>${palLine}<div class="s">${st[1]}</div></div></td>`;
+      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c}"><div class="u">${future?'—':fmt(au)} / ${fmt(fu)}</div><div class="o">${hasOrdFc||aOrd?`单 ${future?'—':fmt(aOrd)} / ${hasOrdFc?fmt(fOrd):'—'}`:'无单量预测'}${trucksNote}</div>${palLine}${subLine(w.code,c,p)}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
     h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}</div></td>${cells}<td class="num"><b>${future?'—':fmt(ao)}</b><br><span style="color:var(--ink3)">/ ${fmt(fo)}</span></td></tr>`;
@@ -1334,7 +1340,7 @@ function renderDailyMatrix(){
       const ho=hoOf(w.code,c,day);
       if(ho){ cells+=hoCell(w.code,c,ho,pt,est,f.length>0,false); continue; }
       const st=status(p.length, pt, false)||['st-none','—'];
-      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c} · 预测 ${fmt(est)} 单 · Gaylord ${fmt(g)} · 托盘 ${fmt(pl)}"><div class="u">${fmt(p.length)} / ${fmt(pt)}</div><div class="o">${f.length?`单 ${fmt(est)} · G${fmt(g)}${pl?' 托'+fmt(pl):''}`:'无早上预测'}</div><div class="s">${st[1]}</div></div></td>`;
+      cells+=`<td><div class="cell ${st[0]}" title="${esc(w.code)} · ${c} · 预测 ${fmt(est)} 单 · Gaylord ${fmt(g)} · 托盘 ${fmt(pl)}"><div class="u">${fmt(p.length)} / ${fmt(pt)}</div><div class="o">${f.length?`单 ${fmt(est)} · G${fmt(g)}${pl?' 托'+fmt(pl):''}`:'无早上预测'}</div>${subLine(w.code,c,p)}<div class="s">${st[1]}</div></div></td>`;
     }
     if(!rowHas) continue; any=true;
     h+=`<tr><td class="wh"><div class="whname"><b>${esc(w.code)}</b><small>${esc(w.name)} · ${esc(w.alias||'')}</small>${ruleWhTag(w.code)?`<div style="margin-top:4px">${ruleWhTag(w.code)}</div>`:''}</div></td>${cells}<td class="num"><b>${fmt(fo)}</b></td></tr>`;
