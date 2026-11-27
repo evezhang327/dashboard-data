@@ -850,9 +850,11 @@ async function loadLive(){
 const DAILY_PEAK = {'Amazon':'Amazon Shipping','FedEx Ground':'FedEx Ground','FedEx Air':'FedEx Express','FedEx Express':'FedEx Express','UPS':'UPS','DHL':'DHL','USPS':'USPS','GOFO':'GOFO','UniUni':'UNIUNI','SpeedX':'Speedx'};
 async function loadDaily(){
   const [rf,rt]=loadRange();
-  const r = await sb.from('daily_forecast_runs').select('id,warehouse,date,run_type,run_at,status,total_est,total_arrived').eq('status','ok').gte('date',rf).lte('date',rt).order('run_at',{ascending:true}).limit(5000);
+  const r = await sb.from('daily_forecast_runs').select('id,warehouse,date,run_type,run_at,status,total_est,total_arrived,target_date').eq('status','ok').gte('date',rf).lte('date',rt).order('run_at',{ascending:true}).limit(5000);
   if(r.error) throw r.error;
   const first={}; for(const x of r.data){ const k=x.warehouse+'|'+x.date; if(!first[k] || (first[k].run_type!=='morning' && x.run_type==='morning')) first[k]=x; }
+  // 当天无截单（节假日）：用最新一次「按下一截单日货量」的运行代替早上预测
+  S.dTarget={}; for(const x of r.data){ if(x.target_date){ first[x.warehouse+'|'+x.date]=x; S.dTarget[x.date]=x.target_date; } }
   const latest={}; for(const x of r.data){ latest[x.warehouse+'|'+x.date]=x; }   // 按 run_at 升序，最后一条即最新
   S.dLatest = Object.values(latest);
   S.dRuns = Object.values(first);                                  // 每仓每天的「当天第一次早上运行」= 当天预测
@@ -1113,7 +1115,7 @@ function barChart(el, series, opts){
       tip.innerHTML = opts.daily
         ? `<b>${md(s.date)} 周${wd(s.date)}</b><br>早上预测：${s.fc?fmt(s.fc)+' '+opts.unit:'—'}<br>${opts.acLabel||'实际'}：${s.ac!=null&&s.ac>0?fmt(s.ac)+' '+opts.unit:'—'}${s.fc>0&&s.ac>0?`<br>${opts.unit==='单'?'预测误差：'+((s.fc-s.ac)/s.ac*100>=0?'+':'')+((s.fc-s.ac)/s.ac*100).toFixed(1)+'%':'达成：'+pct(s.ac,s.fc)+'%'}`:''}`
         : opts.line
-        ? `<b>${md(s.date)} 周${wd(s.date)}</b><br>黑五预测：${fmt(s.fc)} 单<br>日均预测：${s.dl!=null?fmt(s.dl)+' 单'+(s.fc?`（${s.dl>=s.fc?'+':''}${((s.dl/s.fc-1)*100).toFixed(1)}%）`:''):'—'}<br>实际货量：${s.date>today?(s.pre?'前一晚已提前完成 '+fmt(s.pre)+' 单':'未开始'):(s.ac?fmt(s.ac)+' 单':'—')}${s.date<=today&&s.pre?`<br>其中前一晚提前完成：${fmt(s.pre)} 单`:''}${s.pk?`<br>实际做货（当天打包）：${fmt(s.pk)} 单`:''}${s.ac&&s.fc&&s.date<=today?`<br>实际 / 黑五预测：${pct(s.ac,s.fc)}%`:''}${s.ac&&s.dl&&s.date<=today?`<br>实际 / 日均预测：${pct(s.ac,s.dl)}%`:''}`
+        ? `<b>${md(s.date)} 周${wd(s.date)}</b><br>黑五预测：${fmt(s.fc)} 单<br>日均预测：${s.dl!=null?fmt(s.dl)+' 单'+(S.dTarget&&S.dTarget[s.date]?`（当天无截单 · 按 ${md(S.dTarget[s.date])} 截单货量）`:s.fc?`（${s.dl>=s.fc?'+':''}${((s.dl/s.fc-1)*100).toFixed(1)}%）`:''):'—'}<br>实际货量：${s.date>today?(s.pre?'前一晚已提前完成 '+fmt(s.pre)+' 单':'未开始'):(s.ac?fmt(s.ac)+' 单':(S.dTarget&&S.dTarget[s.date]?'— （当天无截单）':'—'))}${s.date<=today&&s.pre?`<br>其中前一晚提前完成：${fmt(s.pre)} 单`:''}${s.pk?`<br>实际做货（当天打包）：${fmt(s.pk)} 单`:''}${s.ac&&s.fc&&s.date<=today?`<br>实际 / 黑五预测：${pct(s.ac,s.fc)}%`:''}${s.ac&&s.dl&&s.date<=today?`<br>实际 / 日均预测：${pct(s.ac,s.dl)}%`:''}`
         : `<b>${md(s.date)} 周${wd(s.date)}</b><br>预测：${fmt(s.fc)} ${opts.unit}<br>实际：${s.date>today?'未开始':fmt(s.ac)+' '+opts.unit}${s.fc>0&&s.date<=today?`<br>达成：${pct(s.ac,s.fc)}%`:''}`;
       tip.style.left=(e.clientX-rc.left)+'px'; tip.style.top=(e.clientY-rc.top-10)+'px'; tip.style.opacity=1;});
     h.addEventListener('mouseleave',()=>tip.style.opacity=0);
