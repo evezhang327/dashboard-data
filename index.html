@@ -238,6 +238,7 @@ body.daily .chip.on{background:#e8effd;border-color:#b6ccf8;color:#1D4ED8}
       <span class="chip-status"><span class="dot" id="modeDot"></span><span id="modeText">—</span></span>
       <a class="btn" id="checkinLink" href="report.html?from=dash" style="text-decoration:none;color:var(--ink)">仓库填报入口 →</a>
       <button class="btn" id="btnRefresh">刷新</button>
+      <button class="btn" id="btnOff" style="display:none" title="管理员标记某服务商当天不提货（如节假日），当天不要求填报">⛔ 今日不提货</button>
       <button class="btn" id="btnExport">导出明细 CSV</button>
       <button class="btn" id="btnAdmin">管理员登录</button>
       <button class="btn" id="btnLogout" style="display:none">退出管理员</button>
@@ -840,6 +841,7 @@ async function loadLive(){
   loadHb();
   await loadIssues();
   try{ const pr=await sb.from('pickup_rules').select('*'); S.rules = pr.error ? [] : pr.data; }catch(e){ S.rules=[]; }
+  try{ const co=await sb.from('carrier_off').select('*').gte('date',loadRange()[0]).lte('date',loadRange()[1]).limit(2000); S.off = co.error ? [] : co.data; }catch(e){ S.off=[]; }
   try{ const h=await sb.from('handover_daily').select('warehouse,date,carrier,trucks,containers,packages,unbound,unbound_late,trailers,updated_at').gte('date',loadRange()[0]).lte('date',loadRange()[1]).limit(5000); if(h.error) throw h.error; setHandover(h.data); }catch(e){ console.warn('容器交接加载失败', e); setHandover([]); }
   try{ await loadDaily(); }catch(e){ console.warn('日均预测加载失败', e); }
   S.lastLoad = new Date();
@@ -1141,6 +1143,10 @@ function renderCharts(){
   barChart($('chartTrucks'), st, {unit:'车', label:'每日到车预测与实际', h:250});
 }
 
+// 管理员标记「今日不提货」（如节假日 USPS）：当天这个服务商不要求填报；warehouse 为空 = 全部仓库
+function offOf(wh,c,day){ return (S.off||[]).find(r=>r.date===day&&r.carrier===c&&(!r.warehouse||r.warehouse===wh)) || null; }
+function offCell(wh,c,off){ return `<td><div class="cell st-na" title="${esc(wh)} · ${c} · 今日不提货${off.note?'（'+esc(off.note)+'）':''}"><div class="u" style="font-size:14px">⛔ 今日不提货</div><div class="o">${esc(off.note||'管理员标记')}</div></div></td>`; }
+function offDay(){ return S.mode==='daily' ? (S.dDate||refToday()) : (S.f.date || (DATES.includes(refToday())?refToday():null)); }
 function ruleOf(wh,c){ const R=S.rules||[]; return R.find(r=>r.warehouse===wh&&r.carrier===c) || R.find(r=>r.warehouse===wh&&r.carrier==='*') || null; }
 // iWMS 当天该仓该服务商的实际单量（今天截单的全部订单，含前一晚提前做完的）
 function iwmsOrders(wh,c,day){ const a=(S.dailyActual||[]).filter(r=>r.warehouse===wh&&r.carrier===c&&r.date===day); if(!a.length) return null;
@@ -1186,6 +1192,7 @@ function renderMatrix(){
       const hasCombo=S.forecast.some(r=>r.warehouse===w.code&&r.carrier===c) || isHo(w.code,c);
       if(!hasCombo && !p.length){ cells+='<td></td>'; continue; }
       rowHas=true;
+      { const off=offOf(w.code,c,day); if(off && !p.length && !future){ cells+=offCell(w.code,c,off); continue; } }
       const fu=f.reduce((s,r)=>s+(r.fc_units||0),0), fOrd=f.reduce((s,r)=>s+(r.fc_orders||0),0), hasOrdFc=f.some(r=>r.fc_orders!=null);
       const rule=ruleOf(w.code,c);
       if(rule && !p.length && !isHo(w.code,c)){ const rc=ruleCell(rule,w.code,c,fu,fOrd,hasOrdFc,day,future); if(rule.mode!=='none'){ fo+=fOrd; ao+=rc.ao; } cells+=rc.html; continue; }
@@ -1215,7 +1222,7 @@ function renderMissing(){
   if(!day){ $('missHint').textContent='大促窗口外'; $('missing').innerHTML=`<div class="empty">选择一个日期查看未填报的仓库与服务商</div>`; return; }
   if(day>refToday()){ $('missHint').textContent='尚未开始'; $('missing').innerHTML=`<div class="empty">${md(day)} 尚未开始</div>`; return; }
   const fc=fcRows([day]).filter(r=>r.fc_units>0), pk=pkRows([day]);
-  const miss=fc.filter(r=>!isHo(r.warehouse,r.carrier)&&!ruleOf(r.warehouse,r.carrier)&&!pk.some(p=>p.warehouse===r.warehouse&&p.carrier===r.carrier));
+  const miss=fc.filter(r=>!isHo(r.warehouse,r.carrier)&&!ruleOf(r.warehouse,r.carrier)&&!offOf(r.warehouse,r.carrier,day)&&!pk.some(p=>p.warehouse===r.warehouse&&p.carrier===r.carrier));
   $('missHint').textContent = `${miss.length} / ${fc.length} 项未填`;
   $('missing').innerHTML = miss.length ? miss.sort((a,b)=>a.warehouse.localeCompare(b.warehouse)).map(r=>`<div class="miss"><div><b>${esc(r.warehouse)}</b> · ${r.carrier}<br><small>${esc(whOf(r.warehouse).name)}${r.mode?` · ${r.mode==='pickup'?'服务商上门':'我方送网点'}`:''}</small></div><div style="text-align:right">预测 ${fmt(r.fc_units)} ${unitOf(r.carrier)==='pallet'?'板':'车'}<br><small>${r.fc_orders!=null?fmt(r.fc_orders)+' 单':'无单量预测'}</small></div></div>`).join('') : `<div class="empty">全部已填报 ✓</div>`;
 }
@@ -1256,7 +1263,11 @@ function renderBanner(){
   let h='';
   if(!LIVE) h=`<div class="banner"><span>${S.demoActuals?'<b>正在显示演示数据</b>：实际值为随机生成，仅用于预览看板效果（假设今天是 11/27）。':'<b>演示模式</b>：尚未连接数据库，看板只显示预测。部署后仓库提交的数据会自动累计到这里。'}</span><button class="btn sm" id="btnDemo">${S.demoActuals?'清除演示数据':'填充演示实际数据'}</button></div>`;
   if(TEST_TODAY) h=`<div class="banner" style="background:#fff4e5;color:#8a4b00"><span><b>测试视图</b>：按 ${md(TEST_TODAY)} 当作「今天」计算进度条和矩阵（真实今天是 ${md(todayPT())}）。</span><a class="btn sm" href="${location.pathname}" style="text-decoration:none;color:inherit">回到真实日期</a></div>`+h;
+  { const d=offDay(), O=d?(S.off||[]).filter(r=>r.date===d):[];
+    if(O.length){ const g={}; O.forEach(r=>{ (g[r.carrier]=g[r.carrier]||[]).push(r); });
+      h+=`<div class="banner" style="background:#f1f5f9;color:#334155"><span>⛔ <b>${md(d)} 今日不提货</b>：${Object.entries(g).map(([c,rs])=>`${esc(c)}（${rs.some(r=>!r.warehouse)?'全部仓库':rs.map(r=>esc(whOf(r.warehouse).alias||r.warehouse)).join('、')}${rs[0].note?' · '+esc(rs[0].note):''}）`).join('；')} · 当天不要求填报</span>${S.admin?'<button class="btn sm" id="btnOff2">修改</button>':''}</div>`; } }
   $('banner').innerHTML=h;
+  { const b2=$('btnOff2'); if(b2) b2.onclick=openOff; }
   const b=$('btnDemo'); if(b) b.onclick=()=>{S.demoActuals=!S.demoActuals; S.pickups=S.demoActuals?makeDemoActuals():[]; [S.daily,S.dailyActual]=S.demoActuals?makeDemoDaily():[[],[]]; renderAll();};
 }
 function renderFoot(){
@@ -1367,6 +1378,7 @@ function renderDailyMatrix(){
       const f=L.filter(r=>r.warehouse===w.code&&r.carrier===c), p=pk.filter(r=>r.warehouse===w.code&&r.carrier===c);
       if(!f.length && !p.length){ cells+='<td></td>'; continue; }
       rowHas=true;
+      { const off=offOf(w.code,c,day); if(off && !p.length){ cells+=offCell(w.code,c,off); continue; } }
       const pt=sumBy(f,'trucks'), est=sumBy(f,'est'), g=sumBy(f,'gaylord'), pl=sumBy(f,'pallets'); fo+=est;
       const ho=hoOf(w.code,c,day);
       if(ho){ cells+=hoCell(w.code,c,ho,pt,est,f.length>0,false); continue; }
@@ -1384,7 +1396,7 @@ function renderDailyMissing(){
   $('missTitle').textContent = `未填报提醒 · ${md(day)} 周${wd(day)}`;
   const L=dLines(day).filter(r=>r.trucks>0), pk=pkRows([day]);
   const by={}; L.forEach(r=>{ const k=r.warehouse+'|'+r.carrier; by[k]=by[k]||{warehouse:r.warehouse,carrier:r.carrier,trucks:0,est:0}; by[k].trucks+=r.trucks; by[k].est+=r.est; });
-  const all=Object.values(by).filter(r=>!isHo(r.warehouse,r.carrier)), miss=all.filter(r=>!pk.some(p=>p.warehouse===r.warehouse&&p.carrier===r.carrier));
+  const all=Object.values(by).filter(r=>!isHo(r.warehouse,r.carrier)&&!offOf(r.warehouse,r.carrier,day)), miss=all.filter(r=>!pk.some(p=>p.warehouse===r.warehouse&&p.carrier===r.carrier));
   $('missHint').textContent = all.length ? `${miss.length} / ${all.length} 项未填` : '按早上预测的预派车提醒';
   $('missing').innerHTML = !all.length ? `<div class="empty">${md(day)} 还没有早上预测</div>`
     : miss.length ? miss.sort((a,b)=>a.warehouse.localeCompare(b.warehouse)).map(r=>`<div class="miss"><div><b>${esc(r.warehouse)}</b> · ${r.carrier}<br><small>${esc(whOf(r.warehouse).name)}</small></div><div style="text-align:right"><b>${fmt(r.trucks)} 车</b><br><small>预测 ${fmt(r.est)} 单</small></div></div>`).join('')
@@ -1477,6 +1489,42 @@ async function resumeRefresh(){
   const r=await sb.from('refresh_requests').select('id,status').neq('scope','scan').in('status',['pending','running']).gte('requested_at',since).order('id',{ascending:false}).limit(1);
   if(!r.error && r.data.length){ $('btnRefresh').disabled=true; pollRefresh(r.data[0].id); }
 }
+// ⛔ 今日不提货（管理员）：选日期、服务商、仓库（默认全部），可填原因；同一页可取消已有标记
+function openOff(){
+  const inp='class="search" style="width:100%;min-width:0;margin-top:4px"';
+  const d0=offDay()||refToday();
+  $('modalBox').innerHTML=`<h3 style="margin:4px 0 4px">⛔ 今日不提货</h3>
+    <div class="hint" style="margin-bottom:10px">标记后这家服务商当天不要求填报：看板格子显示「今日不提货」，不进未填报提醒，21:00 / 23:00 复盘推送里单独列出。</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:min(520px,80vw)">
+      <label>日期<input id="oDate" type="date" ${inp} value="${d0}"></label>
+      <label>服务商<select id="oCar" ${inp}>${CARRIER_ORDER.map(c=>`<option>${c}</option>`).join('')}</select></label>
+      <label style="grid-column:1/-1">原因<input id="oNote" ${inp} placeholder="如：感恩节 USPS 不提货"></label>
+    </div>
+    <div style="margin-top:10px;font-size:13px">仓库</div>
+    <div id="oWh" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"><label class="chip on"><input type="checkbox" value="*" checked style="margin-right:4px">全部仓库</label>${S.warehouses.map(w=>`<label class="chip"><input type="checkbox" value="${esc(w.code)}" style="margin-right:4px">${esc(w.alias||w.code)}</label>`).join('')}</div>
+    <div id="oErr" style="color:var(--bad);font-size:13px;min-height:18px;margin-top:8px"></div>
+    <div style="display:flex;gap:8px"><button class="btn" id="oSave" style="background:#0f172a;color:#fff">保存标记</button><button class="btn" id="oClose">关闭</button></div>
+    <div style="margin-top:14px;font-size:13px;font-weight:600">当天已有标记</div><div id="oList" style="margin-top:6px"></div>`;
+  $('modal').classList.add('on');
+  const drawList=()=>{ const d=$('oDate').value, O=(S.off||[]).filter(r=>r.date===d);
+    $('oList').innerHTML = O.length ? O.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px"><span><b>${esc(r.carrier)}</b> · ${r.warehouse?esc(whOf(r.warehouse).alias||r.warehouse):'全部仓库'}${r.note?' · '+esc(r.note):''} <span style="color:var(--ink3)">${esc((r.created_by||'').split('@')[0])}</span></span><button class="btn sm" data-offdel="${r.id}" style="color:var(--bad)">取消</button></div>`).join('') : '<div class="hint">没有标记</div>'; };
+  drawList();
+  $('oDate').onchange=drawList;
+  $('oWh').onchange=e=>{ const all=$('oWh').querySelector('input[value="*"]'); if(e.target.value==='*'&&e.target.checked){ $('oWh').querySelectorAll('input').forEach(x=>{ if(x!==all) x.checked=false; }); } else if(e.target.checked) all.checked=false;
+    $('oWh').querySelectorAll('label').forEach(l=>l.classList.toggle('on', l.querySelector('input').checked)); };
+  $('oClose').onclick=()=>$('modal').classList.remove('on');
+  $('oList').onclick=async e=>{ const b=e.target.closest('[data-offdel]'); if(!b) return; const r=await sb.from('carrier_off').delete().eq('id',b.dataset.offdel).select('id');
+    if(r.error||!r.data.length){ $('oErr').textContent='取消失败：'+(r.error?r.error.message:'没有权限'); return; }
+    S.off=(S.off||[]).filter(x=>String(x.id)!==String(b.dataset.offdel)); drawList(); renderAll(); };
+  $('oSave').onclick=async()=>{ const d=$('oDate').value, c=$('oCar').value, note=$('oNote').value.trim()||null;
+    const whs=[...$('oWh').querySelectorAll('input:checked')].map(x=>x.value);
+    if(!d) return $('oErr').textContent='请选日期'; if(!whs.length) return $('oErr').textContent='请选仓库（或全部仓库）';
+    const rows=(whs.includes('*')?[null]:whs).map(w=>({date:d,carrier:c,warehouse:w,note}));
+    const r=await sb.from('carrier_off').insert(rows).select('*');
+    if(r.error) return $('oErr').textContent='保存失败：'+r.error.message;
+    S.off=(S.off||[]).concat(r.data); $('oErr').textContent=''; drawList(); renderAll(); };
+}
+$('btnOff').onclick=openOff;
 $('btnExport').onclick=exportCsv;
 window.addEventListener('resize',()=>{clearTimeout(window._rz); window._rz=setTimeout(renderCharts,150);});
 
@@ -1585,6 +1633,7 @@ async function start(){
   $('btnAdmin').style.display = session ? 'none' : '';
   $('btnLogout').style.display = session ? '' : 'none';
   if(session && !S.admin) showErr({message:'当前账号不在管理员名单里，只能查看。'});
+  $('btnOff').style.display = S.admin ? '' : 'none';
   if(S.admin){ $('btnRefresh').textContent='刷新 · 更新货量'; $('btnRefresh').title='从 iWMS 重新抓一遍全美最新货量（Mac 上的采集脚本执行）'; resumeRefresh(); }
   renderAll();
   try{ await loadLive(); }catch(err){ showErr(err); }
