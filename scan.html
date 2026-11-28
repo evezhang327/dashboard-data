@@ -202,6 +202,15 @@ function holidayLine(){
     const cs=Object.entries(g).map(([c,x])=>`${esc(c.replace(' Shipping','').replace(' Ground',''))}${x.all?'':'（'+x.wh.map(w=>esc(whn(w).split(' · ')[0])).join('、')+'）'}${x.note?' · '+esc(x.note):''}`).join('；');
     return `<div style="background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:8px 10px;margin:0 0 8px;font-size:13px">🦃 <b>${md(d)} ${esc(HOL[d]||'')}</b>${cs?'：'+cs+' 不提货':'：服务商可能不提货 / 不扫描'} —— ${md(addDays(d,-1))}–${md(d)} 打包的包裹会顺延到下一个工作日才上网，这几天 24hr 上网率偏低属正常</div>`; }).join('');
 }
+// ISC 可能没同步完：按服务商 × 打包日，看交接满 24h 的包裹里有揽收记录的比例；偏低就提示（可能 ISC 延迟，也可能服务商没扫）
+function iscLine(){
+  const t=ptToday(), g={};
+  filtered().forEach(r=>{ if(r.pack_date>addDays(t,-1)||r.pack_date<addDays(t,-6)) return; const k=r.carrier+'|'+r.pack_date; (g[k]=g[k]||[]).push(r); });
+  const bad=Object.entries(g).map(([k,rs])=>{ const a=agg(rs), on=a.a24+a.a48+a.a96+a.aover; return {k, den:a.den24, on, p:a.den24?on/a.den24:1}; })
+    .filter(x=>x.den>=300&&x.p<0.7).sort((x,y)=>x.p-y.p).slice(0,5);
+  if(!bad.length) return '';
+  return `<div style="background:#eef2ff;color:#3949ab;border-radius:10px;padding:8px 10px;margin:0 0 8px;font-size:13px">⚠️ <b>可能 ISC 还没同步完</b>：${bad.map(x=>{ const [c,d]=x.k.split('|'); return `${esc(c)} ${md(d)}（交接满 24h 的只有 ${Math.round(x.p*100)}% 有揽收记录）`; }).join('；')} —— 可能是 ISC 延迟（节假日前后常见），也可能服务商没扫；建议先抽查几个单号再追。每晚 21:00 会往回补拉 7 天的揽收记录</div>`;
+}
 function cls(v,kind){ if(v==null) return ''; if(kind==='fake') return v>=30?'r-bad':v>=10?'r-warn':'';
   const g=kind==='a24'?[97,93,88]:kind==='tail'?[99,97,95]:[99,97,94]; return v>=g[0]?'r-good':v>=g[1]?'':v>=g[2]?'r-warn':'r-bad'; }
 function ccls(v,kind){ const c=cls(v,kind); return c==='r-good'?'c-good':c==='r-warn'?'c-warn':c==='r-bad'?'c-bad':'c-ok'; }
@@ -343,7 +352,7 @@ function renderFocus(){
   const top=[], seen=new Set(); for(const x of cand){ const k=x.w+'|'+x.c+'|'+x.t; if(seen.has(k)) continue; seen.add(k); top.push(x); if(top.length>=3) break; }
   const rng=S.f.from===S.f.to?md(S.f.from):`${md(S.f.from)}–${md(S.f.to)}`;
   S._focus=top;
-  $('focus').innerHTML=`<div class="card focus"><h2>🔎 重点问题 <span class="hint" style="font-weight:400">打包日 ${rng}${S.f.wh!=='ALL'?' · '+esc(whn(S.f.wh)):''}${S.f.car!=='ALL'?' · '+esc(S.f.car):''} · 点一行看异常包裹</span></h2>`+holidayLine()+
+  $('focus').innerHTML=`<div class="card focus"><h2>🔎 重点问题 <span class="hint" style="font-weight:400">打包日 ${rng}${S.f.wh!=='ALL'?' · '+esc(whn(S.f.wh)):''}${S.f.car!=='ALL'?' · '+esc(S.f.car):''} · 点一行看异常包裹</span></h2>`+holidayLine()+iscLine()+
     (top.length?top.map((x,i)=>`<div class="fi" data-fi="${i}"><b class="n">${i+1}</b><span><b>${esc(whn(x.w))}</b> · ${esc(x.c)}　${x.html}</span><span class="why">${x.why} →</span></div>`).join('')
       :'<div class="hint" style="padding:6px 10px">这个范围内没有明显问题 👍</div>')+`</div>`;
 }
